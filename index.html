@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Akademik Yayın ve CV Yönetimi</title>
+<link rel="stylesheet" href="./style.css"></head>
+<body><header class="top"><div><strong>Akademik Yayın Yönetimi</strong><small>Özel akademik arşiv · İlk sürüm</small></div><button id="logout" class="secondary hidden">Çıkış</button></header>
+<main>
+<section id="setup" class="panel hidden"><h2>Kurulum gerekiyor</h2><p>Önce README.md içindeki Supabase kurulumunu tamamlayın ve config.js dosyasına proje URL'si ile publishable/anon anahtarını girin.</p></section>
+<section id="loginPanel" class="panel narrow hidden"><h1>Güvenli giriş</h1><p>Yayınlarınız yalnızca yetkili hesabınızla görüntülenir.</p><form id="loginForm"><label>E-posta<input id="email" type="email" autocomplete="username" required></label><label>Şifre<input id="password" type="password" autocomplete="current-password" required></label><button>Giriş yap</button></form><p id="loginMsg" class="message"></p></section>
+<div id="app" class="hidden">
+<nav class="tabs"><button data-tab="publications" class="selected">Yayınlarım</button><button data-tab="edit">Yayın ekle</button><button data-tab="cv">CV / Çıktı</button><button data-tab="profile">Profilim</button></nav>
+<section id="publications" class="panel tab"><h1>Bilimsel yayınlarım</h1><div class="stats"><div><small>Yayın</small><strong id="count">0</strong></div><div><small>Kaydedilmiş atıf</small><strong id="citations">0</strong></div></div><label>Yayın ara<input id="search" placeholder="Başlık, yazar, dergi, yıl..."></label><div id="list"></div></section>
+<section id="edit" class="panel tab hidden"><h1 id="editTitle">Yeni yayın ekle</h1><form id="publicationForm">
+<input id="pubId" type="hidden"><div class="columns"><label>DOI<input id="doi" placeholder="10.xxxx/xxxxx"></label><label>PMID<input id="pmid" placeholder="PubMed kimliği"></label></div><button id="doiLookup" type="button" class="secondary">DOI ile bilgileri getir</button>
+<label>Makale başlığı *<input id="title" required></label><label>Yazarlar<input id="authors" placeholder="Soyadı Adı; Soyadı Adı"></label>
+<div class="columns"><label>Dergi<input id="journal"></label><label>Yıl<input id="year" type="number" min="1900" max="2100"></label></div>
+<div class="columns"><label>PubMed bağlantısı<input id="pubmedUrl" type="url" placeholder="https://pubmed.ncbi.nlm.nih.gov/..."></label><label>Dergi bağlantısı<input id="journalUrl" type="url" placeholder="https://..."></label></div>
+<label>Atıf sayısı (elle güncellenebilir)<input id="citationCount" type="number" min="0" value="0"></label><label>Atıf kaynağı<input id="citationSource" placeholder="OpenAlex / Scopus / WoS / Google Scholar"></label>
+<label>PDF dosyası (özel depoya yüklenir)<input id="pdf" type="file" accept="application/pdf"></label><label>Notlar<textarea id="notes" rows="3"></textarea></label>
+<div class="actions"><button type="submit">Yayını kaydet</button><button type="button" id="cancelEdit" class="secondary">Temizle</button></div><p class="message" id="saveMsg"></p></form></section>
+<section id="cv" class="panel tab hidden"><h1>Akademik CV ve yayın listesi</h1><p>CV'ye eklenecek yayınları işaretleyin; tarayıcıdan PDF olarak kaydedebilir veya yazdırabilirsiniz.</p><div id="cvChoices"></div><div class="actions"><button id="printCv">CV / yayın listesini yazdır</button><button id="exportJson" class="secondary">Verileri JSON yedekle</button></div></section>
+<section id="profile" class="panel tab hidden"><h1>Akademik profil</h1><form id="profileForm"><label>Ad soyad<input id="fullName" placeholder="Prof. Dr. ..."></label><label>Kurum<input id="institution"></label><label>Uzmanlık / görev<input id="specialty"></label><label>ORCID<input id="orcid"></label><label>E-posta<input id="contactEmail" type="email"></label><label>Özgeçmiş özeti<textarea id="bio" rows="5"></textarea></label><button>Profili kaydet</button><p id="profileMsg" class="message"></p></form></section>
+</div><p id="globalMsg" class="message"></p>
+</main><script src="./config.js"></script><script type="module" src="./app.js"></script></body></html>
