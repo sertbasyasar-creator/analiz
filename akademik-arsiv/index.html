@@ -5,9 +5,66 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Akademik Belge Arşivim</title>
+  <style>
+    body { margin:0; font-family:Arial,sans-serif; background:#f5f7fa; color:#243247; }
+    header { background:#fff; padding:24px 35px; border-bottom:1px solid #ddd; }
+    h1 { margin:0 0 8px; color:#183b63; }
+    main { max-width:1100px; margin:35px auto; padding:0 20px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:18px; }
+    .card { background:white; border:1px solid #e2e6ed; border-radius:12px; padding:25px; cursor:pointer; text-align:left; font-size:17px; }
+    .card:hover { border-color:#3279bd; background:#f2f8ff; }
+    .panel { background:white; padding:25px; border-radius:12px; margin-top:25px; }
+    input { padding:12px; border:1px solid #ccc; border-radius:8px; max-width:100%; }
+    #search { width:95%; margin-bottom:20px; }
+    #files { list-style:none; padding:0; }
+    #files li { padding:13px; border-bottom:1px solid #eee; }
+    button { cursor:pointer; }
+    .back { padding:10px 16px; margin-bottom:20px; }
+  </style>
 </head>
 <body>
+<header>
   <h1>Akademik Belge Arşivim</h1>
-  <p>İç Hastalıkları - Akademik Dosya Yönetimi</p>
+  <p>İç Hastalıkları | Akademik Dosya Yönetimi</p>
+</header>
+<main>
+  <section id="home">
+    <h2>Belgelerim</h2>
+    <div class="grid">
+      <button class="card" onclick="openFolder('İç Hastalıkları')">📁 İç Hastalıkları</button>
+      <button class="card" onclick="openFolder('Bilimsel Çalışmalar')">📁 Bilimsel Çalışmalar</button>
+      <button class="card" onclick="openFolder('Akademik Yayınlar')">📁 Akademik Yayınlar</button>
+      <button class="card" onclick="openFolder('İdari Belgeler')">📁 İdari Belgeler</button>
+    </div>
+  </section>
+  <section id="folder" class="panel" hidden>
+    <button class="back" onclick="goHome()">← Klasörlere dön</button>
+    <h2 id="folderTitle"></h2>
+    <input id="search" placeholder="Dosya ara..." oninput="filterFiles()">
+    <p id="message">Henüz dosya bulunmuyor.</p>
+    <ul id="files"></ul>
+  </section>
+</main>
+<script>
+  function openFolder(name) {
+    document.getElementById('home').hidden = true;
+    document.getElementById('folder').hidden = false;
+    document.getElementById('folderTitle').textContent = name;
+    document.getElementById('search').value = '';
+    document.getElementById('files').innerHTML = '';
+    document.getElementById('message').textContent =
+      'Henüz dosya bulunmuyor.';
+  }
+  function goHome() {
+    document.getElementById('folder').hidden = true;
+    document.getElementById('home').hidden = false;
+  }
+  function filterFiles() {
+    const query = document.getElementById('search').value.toLocaleLowerCase('tr');
+    document.querySelectorAll('#files li').forEach(item => {
+      item.hidden = !item.textContent.toLocaleLowerCase('tr').includes(query);
+    });
+  }
+</script>
 </body>
 </html>
