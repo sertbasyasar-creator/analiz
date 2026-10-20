@@ -13,6 +13,24 @@
 <input id="pubId" type="hidden"><div class="columns"><label>DOI<input id="doi" placeholder="10.xxxx/xxxxx"></label><label>PMID<input id="pmid" placeholder="PubMed kimliği"></label></div><button id="doiLookup" type="button" class="secondary">DOI ile bilgileri getir</button>
 <label>Makale başlığı *<input id="title" required></label><label>Yazarlar<input id="authors" placeholder="Soyadı Adı; Soyadı Adı"></label>
 <div class="columns"><label>Dergi<input id="journal"></label><label>Yıl<input id="year" type="number" min="1900" max="2100"></label></div>
+
+<div class="columns">
+  <label>Cilt (Volume)
+    <input id="volume" type="text" placeholder="Örn: 25">
+  </label>
+  <label>Sayı (Issue)
+    <input id="issue" type="text" placeholder="Örn: 3">
+  </label>
+</div>
+<div class="columns">
+  <label>Sayfa aralığı
+    <input id="pages" type="text" placeholder="Örn: 125-132">
+  </label>
+  <label>Makale numarası
+    <input id="articleNumber" type="text" placeholder="Örn: e10452">
+  </label>
+</div>
+
 <div class="columns"><label>PubMed bağlantısı<input id="pubmedUrl" type="url" placeholder="https://pubmed.ncbi.nlm.nih.gov/..."></label><label>Dergi bağlantısı<input id="journalUrl" type="url" placeholder="https://..."></label></div>
 <label>Atıf sayısı (elle güncellenebilir)<input id="citationCount" type="number" min="0" value="0"></label><label>Atıf kaynağı<input id="citationSource" placeholder="OpenAlex / Scopus / WoS / Google Scholar"></label>
 <div id="existingPdf" class="hidden" style="padding:12px;margin:12px 0;background:#eef4fa;border-radius:8px"><strong>Mevcut PDF:</strong> <span id="existingPdfName"></span> <button type="button" id="openExistingPdf" class="secondary">PDF dosyasını aç</button><label style="display:block;margin-top:10px"><input id="removePdf" type="checkbox" style="width:auto"> Mevcut PDF dosyasını kaldır</label></div><label>PDF dosyası (özel depoya yüklenir; yeni dosya seçerseniz eskisinin yerini alır)<input id="pdf" type="file" accept="application/pdf"></label><label>Notlar<textarea id="notes" rows="3"></textarea></label>
