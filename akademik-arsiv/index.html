@@ -46,15 +46,49 @@
   </section>
 </main>
 <script>
-  function openFolder(name) {
-    document.getElementById('home').hidden = true;
-    document.getElementById('folder').hidden = false;
-    document.getElementById('folderTitle').textContent = name;
-    document.getElementById('search').value = '';
-    document.getElementById('files').innerHTML = '';
-    document.getElementById('message').textContent =
-      'Henüz dosya bulunmuyor.';
+  
+async function openFolder(name) {
+  document.getElementById('home').hidden = true;
+  document.getElementById('folder').hidden = false;
+  document.getElementById('folderTitle').textContent = name;
+  document.getElementById('search').value = '';
+
+  const files = document.getElementById('files');
+  const message = document.getElementById('message');
+  files.replaceChildren();
+  message.textContent = 'Dosyalar yükleniyor...';
+
+  try {
+    const response = await fetch(
+      'https://pucfzlagszqayvvqdzss.supabase.co/storage/v1/object/list/akademik%20dosyalar',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'sb_publishable_IZSO2FZt5x3xG7zKNOJmWA_CwZZNUfj'
+        },
+        body: JSON.stringify({
+          prefix: name === 'İç Hastalıkları' ? 'Ic Hastaliklari/' : name + '/',
+          limit: 100
+        })
+      }
+    );
+
+    if (!response.ok) throw new Error('Erişim başarısız: ' + response.status);
+
+    const data = await response.json();
+    message.textContent = data.length ? '' : 'Bu klasörde dosya bulunamadı.';
+
+    data.forEach(file => {
+      const li = document.createElement('li');
+      li.textContent = file.name;
+      files.appendChild(li);
+    });
+  } catch (error) {
+    message.textContent = 'Dosyalar alınamadı: ' + error.message;
   }
+}
+
   function goHome() {
     document.getElementById('folder').hidden = true;
     document.getElementById('home').hidden = false;
