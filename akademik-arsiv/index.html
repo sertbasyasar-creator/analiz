@@ -23,11 +23,21 @@
   </style>
 </head>
 <body>
+
+<section id="loginPanel" class="panel" style="max-width:400px;margin:40px auto;">
+  <h2>Akademik Arşiv Girişi</h2>
+  <form id="loginForm">
+    <input id="email" type="email" placeholder="E-posta" autocomplete="username" required>
+    <input id="password" type="password" placeholder="Şifre" autocomplete="current-password" required>
+    <button type="submit">Giriş Yap</button>
+  </form>
+  <p id="loginMessage" role="status"></p>
+</section>
 <header>
   <h1>Akademik Belge Arşivim</h1>
   <p>İç Hastalıkları | Akademik Dosya Yönetimi</p>
 </header>
-<main>
+<main id="archiveContent" hidden>
   <section id="home">
     <h2>Belgelerim</h2>
     <div class="grid">
@@ -65,7 +75,10 @@ async function openFolder(name) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': 'sb_publishable_IZSO2FZt5x3xG7zKNOJmWA_CwZZNUfj'
+         
+'apikey': SUPABASE_KEY,
+'Authorization': 'Bearer ' + accessToken
+
         },
         body: JSON.stringify({
           prefix: name === 'İç Hastalıkları' ? 'Ic Hastaliklari/' : name + '/',
@@ -100,5 +113,56 @@ async function openFolder(name) {
     });
   }
 </script>
+  
+<script>
+const SUPABASE_URL = 'https://pucfzlagszqayvvqdzss.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_IZSO2FZt5x3xG7zKNOJmWA_CwZZNUfj';
+let accessToken = null;
+const loginForm = document.getElementById('loginForm');
+const loginMessage = document.getElementById('loginMessage');
+const archiveContent = document.getElementById('archiveContent');
+const loginPanel = document.getElementById('loginPanel');
+
+function showArchive() {
+  archiveContent.hidden = false;
+  loginPanel.hidden = true;
+}
+
+loginForm.addEventListener('submit', async function(event) {
+  event.preventDefault();
+  loginMessage.textContent = 'Giriş kontrol ediliyor...';
+
+  try {
+    const response = await fetch(
+      SUPABASE_URL + '/auth/v1/token?grant_type=password',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY
+        },
+        body: JSON.stringify({
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.access_token) {
+      throw new Error('E-posta veya şifre hatalı.');
+    }
+
+    
+accessToken = data.access_token;
+showArchive();
+
+  } catch (error) {
+    loginMessage.textContent = error.message;
+  }
+});
+</script>
+
 </body>
 </html>
