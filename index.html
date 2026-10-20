@@ -15,6 +15,20 @@
 <div class="columns"><label>Dergi<input id="journal"></label><label>Yıl<input id="year" type="number" min="1900" max="2100"></label></div>
 
 <div class="columns">
+  <label>Yayın kategorisi
+    <select id="publicationCategory">
+      <option value="unclassified">Sınıflandırılmamış</option>
+      <option value="sci">SCI / SCI-Expanded</option>
+      <option value="esci">ESCI</option>
+      <option value="scopus">Scopus / Diğer uluslararası indeksler</option>
+      <option value="international">Diğer uluslararası hakemli dergiler</option>
+      <option value="national">Ulusal hakemli dergiler</option>
+      <option value="other">Diğer bilimsel yayınlar</option>
+    </select>
+  </label>
+</div>
+
+<div class="columns">
   <label>Cilt (Volume)
     <input id="volume" type="text" placeholder="Örn: 25">
   </label>
