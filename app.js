@@ -37,6 +37,83 @@ article_number:$('articleNumber').value.trim(),
 citation_count:Number($('citationCount').value)||0,citation_source:$('citationSource').value.trim(),notes:$('notes').value.trim()};let pdfPath=null;const file=$('pdf').files[0];if(file){if(file.type!=='application/pdf'||file.size>25*1024*1024){msg('saveMsg','PDF en fazla 25 MB olmalı.');return}pdfPath=`${user.id}/${crypto.randomUUID()}.pdf`;const up=await db.storage.from('publication-pdfs').upload(pdfPath,file,{contentType:'application/pdf',upsert:false});if(up.error){msg('saveMsg',up.error.message);return}data.pdf_path=pdfPath}else if(id){const old=publications.find(x=>x.id===id);data.pdf_path=$('removePdf').checked?null:(old?.pdf_path||null)}const result=id?await db.from('publications').update(data).eq('id',id):await db.from('publications').insert(data);if(result.error){if(pdfPath)await db.storage.from('publication-pdfs').remove([pdfPath]);msg('saveMsg',result.error.message);return}if(id){const old=publications.find(x=>x.id===id);if(old?.pdf_path&&(pdfPath||$('removePdf').checked)){const removal=await db.storage.from('publication-pdfs').remove([old.pdf_path]);if(removal.error)console.warn('Eski PDF silinemedi:',removal.error.message);}}resetEdit();await load();tab('publications');};
 $('profileForm').onsubmit=async e=>{e.preventDefault();const p={user_id:user.id,full_name:$('fullName').value,institution:$('institution').value,specialty:$('specialty').value,orcid:$('orcid').value,contact_email:$('contactEmail').value,bio:$('bio').value};const {error}=await db.from('profiles').upsert(p);msg('profileMsg',error?error.message:'Profil kaydedildi.');if(!error)profile=p;};
 function renderCv(){$('cvChoices').innerHTML=publications.map(p=>`<div class="cvline"><label><input type="checkbox" class="cvcheck" value="${p.id}" checked>${safe(p.title)} (${safe(p.year)})</label></div>`).join('')||'<p>Önce yayın ekleyin.</p>'}
-$('printCv').onclick=()=>{const ids=new Set([...document.querySelectorAll('.cvcheck:checked')].map(x=>x.value));const rows=publications.filter(p=>ids.has(p.id));const w=window.open('','_blank');if(!w){alert('Tarayıcı açılır pencereyi engelledi.');return}const html=`<!doctype html><html lang="tr"><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt Georgia,serif;margin:45px;line-height:1.6}h1{font-size:22pt}h2{font-size:16pt}li{margin:10px 0}</style><h1>${safe(profile.full_name||'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel yayınlar (${rows.length})</h2><ol>${rows.map(p=>`<li>${safe(p.authors)}. ${safe(p.title)}. <em>${safe(p.journal)}</em>. ${safe(p.year)}. ${p.doi?'DOI: '+safe(p.doi):''}</li>`).join('')}</ol>`;w.document.write(html);w.document.close();w.focus();setTimeout(()=>w.print(),300);};
+
+$('printCv').onclick = () => {
+  const ids = new Set(
+    [...document.querySelectorAll('.cvcheck:checked')]
+      .map(x => x.value)
+  );
+
+  const rows = publications.filter(p => ids.has(p.id));
+
+  const w = window.open('', '_blank');
+  if (!w) {
+    alert('Tarayıcı açılır pencereyi engelledi.');
+    return;
+  }
+
+  const html = `
+    <!doctype html>
+    <html lang="tr">
+    <head>
+      <meta charset="UTF-8">
+      <title>Akademik CV</title>
+      <style>
+        body {
+          font: 12pt Georgia, serif;
+          margin: 45px;
+          line-height: 1.6;
+        }
+        h1 { font-size: 22pt; }
+        h2 { font-size: 16pt; }
+        li {
+          margin: 10px 0;
+          break-inside: avoid;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>${safe(profile.full_name || 'Akademik CV')}</h1>
+      <p>
+        ${safe(profile.specialty)}<br>
+        ${safe(profile.institution)}<br>
+        ${safe(profile.contact_email)}<br>
+        ${safe(profile.orcid)}
+      </p>
+      <p>${safe(profile.bio)}</p>
+
+      <h2>Bilimsel yayınlar (${rows.length})</h2>
+      <ol>
+        ${rows.map(p => {
+          const volume = p.volume ? safe(p.volume) : '';
+          const issue = p.issue ? '(' + safe(p.issue) + ')' : '';
+          const pages = p.pages ? ':' + safe(p.pages) : '';
+          const article = p.article_number
+            ? ' Makale no: ' + safe(p.article_number) + '.'
+            : '';
+          const details = volume + issue + pages;
+          const doi = p.doi ? ' DOI: ' + safe(p.doi) : '';
+
+          return `
+            <li>
+              ${safe(p.authors)}.
+              ${safe(p.title)}.
+              <em>${safe(p.journal)}</em>.
+              ${safe(p.year)}${details ? ';' + details : ''}.
+              ${article}${doi}
+            </li>
+          `;
+        }).join('')}
+      </ol>
+    </body>
+    </html>
+  `;
+
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
+};
+
 $('exportJson').onclick=()=>{const blob=new Blob([JSON.stringify({profile,publications:publications.map(({pdf_path,...rest})=>rest)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='akademik-yayinlar-yedek.json';a.click();URL.revokeObjectURL(a.href);};
 start().catch(e=>msg('globalMsg',e.message));
