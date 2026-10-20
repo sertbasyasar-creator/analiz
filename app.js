@@ -43,13 +43,60 @@ citation_count:Number($('citationCount').value)||0,citation_source:$('citationSo
 $('profileForm').onsubmit=async e=>{e.preventDefault();const p={user_id:user.id,full_name:$('fullName').value,institution:$('institution').value,specialty:$('specialty').value,orcid:$('orcid').value,contact_email:$('contactEmail').value,bio:$('bio').value};const {error}=await db.from('profiles').upsert(p);msg('profileMsg',error?error.message:'Profil kaydedildi.');if(!error)profile=p;};
 function renderCv(){$('cvChoices').innerHTML=publications.map(p=>`<div class="cvline"><label><input type="checkbox" class="cvcheck" value="${p.id}" checked>${safe(p.title)} (${safe(p.year)})</label></div>`).join('')||'<p>Önce yayın ekleyin.</p>'}
 
+
 $('printCv').onclick = () => {
   const ids = new Set(
     [...document.querySelectorAll('.cvcheck:checked')]
       .map(x => x.value)
   );
 
-  const rows = publications.filter(p => ids.has(p.id));
+  const rows = publications.filter(p => ids.has(String(p.id)));
+
+  const categories = [
+    ['sci', 'SCI / SCI-Expanded'],
+    ['esci', 'ESCI'],
+    ['scopus', 'Scopus / Diğer uluslararası indeksler'],
+    ['international', 'Diğer uluslararası hakemli dergiler'],
+    ['national', 'Ulusal hakemli dergiler'],
+    ['other', 'Diğer bilimsel yayınlar'],
+    ['unclassified', 'Sınıflandırılmamış yayınlar']
+  ];
+
+  const formatPublication = p => {
+    const volume = p.volume ? safe(p.volume) : '';
+    const issue = p.issue ? '(' + safe(p.issue) + ')' : '';
+    const pages = p.pages ? ':' + safe(p.pages) : '';
+    const details = volume + issue + pages;
+    const article = p.article_number
+      ? ' Makale no: ' + safe(p.article_number) + '.'
+      : '';
+    const doi = p.doi ? ' DOI: ' + safe(p.doi) : '';
+
+    return `<li>
+      ${safe(p.authors)}.
+      ${safe(p.title)}.
+      <em>${safe(p.journal)}</em>.
+      ${safe(p.year)}${details ? ';' + details : ''}.
+      ${article}${doi}
+    </li>`;
+  };
+
+  const sections = categories.map(([key, label]) => {
+    const group = rows.filter(
+      p => (p.publication_category || 'unclassified') === key
+    );
+
+    if (!group.length) return '';
+
+    return `
+      <section>
+        <h2>${safe(label)} (${group.length})</h2>
+        <ol>
+          ${group.map(formatPublication).join('')}
+        </ol>
+      </section>
+    `;
+  }).join('');
 
   const w = window.open('', '_blank');
   if (!w) {
@@ -65,15 +112,26 @@ $('printCv').onclick = () => {
       <title>Akademik CV</title>
       <style>
         body {
-          font: 12pt Georgia, serif;
-          margin: 45px;
-          line-height: 1.6;
+          font: 12pt "Times New Roman", serif;
+          margin: 35px;
+          line-height: 1.5;
         }
-        h1 { font-size: 22pt; }
-        h2 { font-size: 16pt; }
+        h1 { font-size: 20pt; }
+        h2 {
+          font-size: 14pt;
+          margin-top: 25px;
+          border-bottom: 1px solid #999;
+        }
         li {
-          margin: 10px 0;
+          margin: 9px 0;
           break-inside: avoid;
+          overflow-wrap: anywhere;
+        }
+        section { margin-bottom: 20px; }
+        @media print {
+          @page { size: A4; margin: 18mm; }
+          body { margin: 0; }
+          h2 { break-after: avoid; }
         }
       </style>
     </head>
@@ -86,30 +144,8 @@ $('printCv').onclick = () => {
         ${safe(profile.orcid)}
       </p>
       <p>${safe(profile.bio)}</p>
-
-      <h2>Bilimsel yayınlar (${rows.length})</h2>
-      <ol>
-        ${rows.map(p => {
-          const volume = p.volume ? safe(p.volume) : '';
-          const issue = p.issue ? '(' + safe(p.issue) + ')' : '';
-          const pages = p.pages ? ':' + safe(p.pages) : '';
-          const article = p.article_number
-            ? ' Makale no: ' + safe(p.article_number) + '.'
-            : '';
-          const details = volume + issue + pages;
-          const doi = p.doi ? ' DOI: ' + safe(p.doi) : '';
-
-          return `
-            <li>
-              ${safe(p.authors)}.
-              ${safe(p.title)}.
-              <em>${safe(p.journal)}</em>.
-              ${safe(p.year)}${details ? ';' + details : ''}.
-              ${article}${doi}
-            </li>
-          `;
-        }).join('')}
-      </ol>
+      <h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>
+      ${sections || '<p>Seçili yayın bulunmuyor.</p>'}
     </body>
     </html>
   `;
