@@ -76,11 +76,17 @@ async function loadPresentations(){
 
 function renderPresentations(){
   const listEl = $('presentationsList');
-  if(!presentations.length){
-    listEl.innerHTML = '<p>Henüz yüklenmiş sunum bulunmuyor.</p>';
+  const q = $('presSearch')?.value.toLocaleLowerCase('tr') || '';
+  
+  // Arama filtresi
+  const filtered = presentations.filter(p => p.title.toLocaleLowerCase('tr').includes(q));
+
+  if(!filtered.length){
+    listEl.innerHTML = '<p>Eşleşen sunum bulunmuyor.</p>';
     return;
   }
-  listEl.innerHTML = presentations.map(p => `
+  
+  listEl.innerHTML = filtered.map(p => `
     <article class="publication" style="margin-bottom:15px; padding:15px; background:#fff; border:1px solid #e2e8f0; border-radius:8px;">
       <h3>${safe(p.title)}</h3>
       <div class="actions" style="margin-top:10px;">
@@ -89,6 +95,11 @@ function renderPresentations(){
       </div>
     </article>
   `).join('');
+}
+
+// Arama kutusuna her harf yazıldığında filtreleme yapması için
+if($('presSearch')) {
+  $('presSearch').oninput = renderPresentations;
 }
 
 $('presentationForm').onsubmit = async e => {
