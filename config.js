@@ -1,6 +1,4 @@
-// Supabase > Project Settings > API bölümündeki değerleri girin.
-// Bu dosyada ASLA service_role / secret key kullanmayın.
 window.APP_CONFIG = {
-  supabaseUrl: "https://kxxovniyftqaejwrnwaj.supabase.co",
-  supabaseAnonKey: "sb_publishable_sPQ_RqpKOcVNHnLTkQmkqg_uGUiW_SF"
+  supabaseUrl: "https://pucfzlagszqayvvqdzss.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1Y2Z6bGFnc3pxYXl2dnFkenNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0Nzc4NDMsImV4cCI6MjEwODA1Mzg0M30.nMY0PtfhLz6qws1Lo2ShBzFUK9sLDltQyh1iVGd9sFI"
 };
