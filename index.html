@@ -57,10 +57,13 @@
 <div id="existingPdf" class="hidden" style="padding:12px;margin:12px 0;background:#eef4fa;border-radius:8px"><strong>Mevcut PDF:</strong> <span id="existingPdfName"></span> <button type="button" id="openExistingPdf" class="secondary">PDF dosyasını aç</button><label style="display:block;margin-top:10px"><input id="removePdf" type="checkbox" style="width:auto"> Mevcut PDF dosyasını kaldır</label></div><label>PDF dosyası (özel depoya yüklenir; yeni dosya seçerseniz eskisinin yerini alır)<input id="pdf" type="file" accept="application/pdf"></label><label>Notlar<textarea id="notes" rows="3"></textarea></label>
 <div class="actions"><button type="submit">Yayını kaydet</button><button type="button" id="cancelEdit" class="secondary">Temizle</button></div><p class="message" id="saveMsg"></p></form></section>
 
-<!-- SUNUMLAR SEKMESİ EKLENDİ -->
 <section id="presentationsTab" class="panel tab hidden">
-  <h1>Sunumlarım</h1>
-  <form id="presentationForm" style="margin-bottom: 25px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+  <h1>Sunumlarım</h1> 
+  <label>Sunum ara
+    <input id="presSearch" placeholder="Sunum başlığı ara...">
+  </label>
+
+  <form id="presentationForm" style="margin: 20px 0; padding: 15px; background: #f8fafc; border-radius: 8px;">
     <h3>Yeni sunum yükle</h3>
     <label>Sunum Başlığı *<input id="presTitle" required placeholder="Örn: Kranial Görüntüleme Sunumu"></label>
     <label>Dosya (PPTX, PDF vb.) *<input id="presFile" type="file" required accept=".pptx,.pdf,.ppt,.ppsx"></label>
