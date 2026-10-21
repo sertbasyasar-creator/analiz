@@ -63,7 +63,7 @@ citation_count:Number($('citationCount').value)||0,citation_source:$('citationSo
 $('profileForm').onsubmit=async e=>{e.preventDefault();const p={user_id:user.id,full_name:$('fullName').value,institution:$('institution').value,specialty:$('specialty').value,orcid:$('orcid').value,contact_email:$('contactEmail').value,bio:$('bio').value};const {error}=await db.from('profiles').upsert(p);msg('profileMsg',error?error.message:'Profil kaydedildi.');if(!error)profile=p;};
 function renderCv(){$('cvChoices').innerHTML=publications.map(p=>`<div class="cvline"><label><input type="checkbox" class="cvcheck" value="${p.id}" checked>${safe(p.title)} (${safe(p.year)})</label></div>`).join('')||'<p>Önce yayın ekleyin.</p>'}
 
-// --- SUNUMLAR YÖNETİMİ (YENİ EKLENEN KISIM) ---
+// --- SUNUMLAR YÖNETİMİ ---
 async function loadPresentations(){
   const {data, error} = await db.from('presentations').select('*').order('created_at', {ascending: false});
   if(error){
@@ -98,8 +98,9 @@ $('presentationForm').onsubmit = async e => {
   const file = $('presFile').files[0];
   if(!file) { msg('presMsg', 'Lütfen bir dosya seçin.'); return; }
 
-  // Dosya adını güvenli hale getirelim ve storage'a yükleyelim
-  const filePath = `${user.id}/${crypto.randomUUID()}_${file.name}`;
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const filePath = `${Date.now()}_${safeName}`;
+
   const { error: uploadError } = await db.storage.from('sunumlar').upload(filePath, file);
 
   if(uploadError){
@@ -107,11 +108,9 @@ $('presentationForm').onsubmit = async e => {
     return;
   }
 
-  // Yüklenen dosyanın public linkini alalım
   const { data: publicURLData } = db.storage.from('sunumlar').getPublicUrl(filePath);
   const file_url = publicURLData.publicUrl;
 
-  // Veritabanına kaydedelim
   const { error: dbError } = await db.from('presentations').insert([{ title, file_url }]);
 
   if(dbError){
@@ -131,7 +130,6 @@ $('presentationsList').onclick = async e => {
     const id = btn.dataset.id;
     const fileUrl = btn.dataset.url;
     
-    // URL'den dosya yolunu (path) çıkaralım ki storage'dan da silebilelim
     try {
       const urlObj = new URL(fileUrl);
       const pathParts = urlObj.pathname.split('/sunumlar/');
@@ -143,7 +141,6 @@ $('presentationsList').onclick = async e => {
       console.warn('Storage dosya yolu çözülemedi:', err);
     }
 
-    // Veritabanından kaydı sil
     const { error } = await db.from('presentations').delete().eq('id', id);
     if(error){
       alert('Silme hatası: ' + error.message);
@@ -152,13 +149,47 @@ $('presentationsList').onclick = async e => {
     }
   }
 };
-// --- SUNUMLAR YÖNETİMİ SONU ---
 
 $('printCv').onclick = () => {
-  // (Aynı CV kodları...)
   const ids = new Set([...document.querySelectorAll('.cvcheck:checked')].map(x => x.value));
   const rows = publications.filter(p => ids.has(String(p.id)));
-  // ... (Geri kalan CV yazdırma fonksiyonu aynen korunmuştur)
+
+  const categories = [
+    ['sci', 'SCI / SCI-Expanded'],
+    ['esci', 'ESCI'],
+    ['scopus', 'Scopus / Diğer uluslararası indeksler'],
+    ['international', 'Diğer uluslararası hakemli dergiler'],
+    ['national', 'Ulusal hakemli dergiler'],
+    ['other', 'Diğer bilimsel yayınlar'],
+    ['unclassified', 'Sınıflandırılmamış yayınlar']
+  ];
+
+  const formatPublication = p => {
+    const volume = p.volume ? safe(p.volume) : '';
+    const issue = p.issue ? '(' + safe(p.issue) + ')' : '';
+    const pages = p.pages ? ':' + safe(p.pages) : '';
+    const details = volume + issue + pages;
+    const article = p.article_number ? ' Makale no: ' + safe(p.article_number) + '.' : '';
+    const doi = p.doi ? ' DOI: ' + safe(p.doi) : '';
+
+    return `<li>${safe(p.authors)}. ${safe(p.title)}. <em>${safe(p.journal)}</em>. ${safe(p.year)}${details ? ';' + details : ''}.${article}${doi}</li>`;
+  };
+
+  const sections = categories.map(([key, label]) => {
+    const group = rows.filter(p => (p.publication_category || 'unclassified') === key);
+    if (!group.length) return '';
+    return `<section><h2>${safe(label)} (${group.length})</h2><ol>${group.map(formatPublication).join('')}</ol></section>`;
+  }).join('');
+
+  const w = window.open('', '_blank');
+  if (!w) { alert('Tarayıcı açılır pencereyi engelledi.'); return; }
+
+  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunmuyor.</p>'}</body></html>`;
+
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
 };
 
 $('exportJson').onclick=()=>{const blob=new Blob([JSON.stringify({profile,publications:publications.map(({pdf_path,...rest})=>rest)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='akademik-yayinlar-yedek.json';a.click();URL.revokeObjectURL(a.href);};
