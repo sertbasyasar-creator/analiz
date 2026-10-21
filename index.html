@@ -60,18 +60,17 @@
 <section id="presentationsTab" class="panel tab hidden">
   <h1>Sunumlarım</h1>
   
-  <!-- BURAYI EKLEMEMİZ GEREKİYORDU -->
-  <label>Sunum ara
-    <input id="presSearch" placeholder="Sunum başlığı ara...">
-  </label>
-
-  <form id="presentationForm" style="margin: 20px 0; padding: 15px; background: #f8fafc; border-radius: 8px;">
+  <form id="presentationForm" style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px;">
     <h3>Yeni sunum yükle</h3>
     <label>Sunum Başlığı *<input id="presTitle" required placeholder="Örn: Kranial Görüntüleme Sunumu"></label>
     <label>Dosya (PPTX, PDF vb.) *<input id="presFile" type="file" required accept=".pptx,.pdf,.ppt,.ppsx"></label>
     <div class="actions" style="margin-top: 10px;"><button type="submit">Sunumu Yükle</button></div>
     <p class="message" id="presMsg"></p>
   </form>
+  <label style="margin-bottom: 15px;">Sunum ara
+    <input id="presSearch" placeholder="Sunum başlığı ara...">
+  </label>
+
   <div id="presentationsList"><p>Yüklenen sunum bulunmuyor.</p></div>
 </section>
 
