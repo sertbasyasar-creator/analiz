@@ -38,10 +38,16 @@ async function load(){
 
 function render(){const q=$('search').value.toLocaleLowerCase('tr');const arr=publications.filter(p=>[p.title,p.authors,p.journal,p.year].join(' ').toLocaleLowerCase('tr').includes(q));$('count').textContent=publications.length;$('citations').textContent=publications.reduce((s,p)=>s+(p.citation_count||0),0);$('list').innerHTML=arr.length?arr.map(p=>`<article class="publication"><h3>${safe(p.title)}</h3><p>${safe(p.authors)} · 
 ${safe(p.journal)} · ${safe(p.year)}${p.volume?'; '+safe(p.volume):''}${p.issue?'('+safe(p.issue)+')':''}${p.pages?':'+safe(p.pages):''}${p.article_number?' · Makale no: '+safe(p.article_number):''}
-</p><p>Atıf: ${p.citation_count||0} ${p.citation_source?'('+safe(p.citation_source)+')':''}</p><div class="actions">${p.pdf_path?`<button data-action="pdf" data-id="${p.id}">PDF aç / yazdır</button>`:''}${p.doi?link(doiUrl(p.doi),'DOI'):''} ${link(pubmedUrl(p),'PubMed')} ${link(url(p.journal_url),'Dergi sayfası')} <button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="secondary" data-action="delete" data-id="${p.id}">Sil</button></div></article>`).join(''):'<p>Henüz kayıtlı yayın bulunmuyor.</p>';}
+</p><p>Atıf: ${p.citation_count||0} ${p.citation_source?'('+safe(p.citation_source)+')':''}</p><div class="actions">${p.pdf_path?`<button data-action="pdf" data-id="${p.id}">PDF aç / yazdır</button>`:''}${p.doi?link(doiUrl(p.doi),'DOI'):''} ${link(pubmedUrl(p),'PubMed')} ${link(url(p.journal_url),'Dergi sayfası')} <button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button></div></article>`).join(''):'<p>Henüz kayıtlı yayın bulunmuyor.</p>';}
 $('search').oninput=render;
 
-$('list').onclick=async e=>{const b=e.target.closest('button[data-action]');if(!b)return;const p=publications.find(x=>x.id===b.dataset.id);if(!p)return;if(b.dataset.action==='edit')edit(p);if(b.dataset.action==='pdf'){const {data,error}=await db.storage.from('publication-pdfs').createSignedUrl(p.pdf_path,60);if(error)alert(error.message);else window.open(data.signedUrl,'_blank','noopener,noreferrer');}if(b.dataset.action==='delete'&&confirm('Bu yayını ve yüklenen PDF dosyasını silmek istiyor musunuz?')){const {error}=await db.from('publications').delete().eq('id',p.id);if(error)alert(error.message);else{if(p.pdf_path)await db.storage.from('publication-pdfs').remove([p.pdf_path]);await load()}}};
+$('list').onclick=async e=>{const b=e.target.closest('button[data-action]');if(!b)return;const p=publications.find(x=>x.id===b.dataset.id);if(!p)return;if(b.dataset.action==='edit')edit(p);if(b.dataset.action==='pdf'){const {data,error}=await db.storage.from('publication-pdfs').createSignedUrl(p.pdf_path,60);if(error)alert(error.message);else window.open(data.signedUrl,'_blank','noopener,noreferrer');}if(b.dataset.action==='delete'){
+  showCustomConfirm('Yayını Sil', 'Bu yayını ve yüklenen PDF dosyasını silmek istiyor musunuz?', async () => {
+    const {error}=await db.from('publications').delete().eq('id',p.id);
+    if(error)alert(error.message);
+    else{if(p.pdf_path)await db.storage.from('publication-pdfs').remove([p.pdf_path]);await load()}
+  });
+}};
 
 function edit(p){$('publicationForm').reset();msg('saveMsg','');const fields={pubId:p.id,doi:p.doi,pmid:p.pmid,title:p.title,authors:p.authors,journal:p.journal,year:p.year,
 volume:p.volume,issue:p.issue,pages:p.pages,articleNumber:p.article_number,
@@ -77,8 +83,6 @@ async function loadPresentations(){
 function renderPresentations(){
   const listEl = $('presentationsList');
   const q = $('presSearch')?.value.toLocaleLowerCase('tr') || '';
-  
-  // Arama filtresi
   const filtered = presentations.filter(p => p.title.toLocaleLowerCase('tr').includes(q));
 
   if(!filtered.length){
@@ -87,24 +91,21 @@ function renderPresentations(){
   }
   
   listEl.innerHTML = filtered.map(p => `
-    <article class="publication" style="margin-bottom:15px; padding:15px; background:#fff; border:1px solid #e2e8f0; border-radius:8px;">
+    <article class="publication" style="margin-bottom:15px; padding:15px;">
       <h3>${safe(p.title)}</h3>
       <div class="actions" style="margin-top:10px;">
-        <a class="button" href="${safe(p.file_url)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; padding:6px 12px; background:#2563eb; color:#fff; border-radius:4px; font-size:14px;">Sunumu Aç / İndir</a>
-        <button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}" style="margin-left:8px;">Sil</button>
+        <a class="button" href="${safe(p.file_url)}" target="_blank" rel="noopener noreferrer">Sunumu Aç / İndir</a>
+        <button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>
       </div>
     </article>
   `).join('');
 }
 
-// Arama kutusuna her harf yazıldığında filtreleme yapması için
-if($('presSearch')) {
-  $('presSearch').oninput = renderPresentations;
-}
-
 $('presentationForm').onsubmit = async e => {
   e.preventDefault();
   msg('presMsg', 'Sunum yükleniyor...');
+  $('presMsg').className = 'message';
+
   const title = $('presTitle').value.trim();
   const file = $('presFile').files[0];
   if(!file) { msg('presMsg', 'Lütfen bir dosya seçin.'); return; }
@@ -130,14 +131,47 @@ $('presentationForm').onsubmit = async e => {
   }
 
   msg('presMsg', 'Sunum başarıyla yüklendi!');
+  $('presMsg').className = 'message success';
+
+  setTimeout(() => {
+    msg('presMsg', '');
+    $('presMsg').className = 'message';
+  }, 3000);
+
   $('presentationForm').reset();
   await loadPresentations();
 };
 
+// ŞIK ÖZEL ONAY MODALI (CONFIRM YERİNE)
+function showCustomConfirm(title, text, onConfirm) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'custom-modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="custom-modal">
+      <h3>${safe(title)}</h3>
+      <p>${safe(text)}</p>
+      <div class="custom-modal-actions">
+        <button id="modalYes" class="danger">Evet, Sil</button>
+        <button id="modalNo" class="secondary">İptal</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+  backdrop.querySelector('#modalYes').onclick = () => {
+    backdrop.remove();
+    onConfirm();
+  };
+  backdrop.querySelector('#modalNo').onclick = () => {
+    backdrop.remove();
+  };
+}
+
 $('presentationsList').onclick = async e => {
   const btn = e.target.closest('.delete-pres');
   if(!btn) return;
-  if(confirm('Bu sunumu silmek istediğinize emin misiniz?')){
+
+  showCustomConfirm('Sunumu Sil', 'Bu sunumu silmek istediğinize emin misiniz?', async () => {
     const id = btn.dataset.id;
     const fileUrl = btn.dataset.url;
     
@@ -158,8 +192,12 @@ $('presentationsList').onclick = async e => {
     } else {
       await loadPresentations();
     }
-  }
+  });
 };
+
+if($('presSearch')) {
+  $('presSearch').oninput = renderPresentations;
+}
 
 $('printCv').onclick = () => {
   const ids = new Set([...document.querySelectorAll('.cvcheck:checked')].map(x => x.value));
