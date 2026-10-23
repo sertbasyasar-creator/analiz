@@ -15,19 +15,37 @@ function tab(id){
   document.querySelectorAll('.tab').forEach(x=>hide(x.id));
   show(id);
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('selected',b.dataset.tab===id));
-  if(id==='cv')renderCv();
-  
-  // DÜZELTME BURADA: Sunumlar sekmesine her tıklandığında verileri taze çek
+  if(id==='cv') renderCv();
   if(id==='presentationsTab') {
-    presentations = []; // Önce eski belleği temizle
+    presentations = []; 
     loadPresentations();
   }
 }
 
-async function start(){if(!configured){show('setup');return}db=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);const {data:{session}}=await db.auth.getSession();await sessionChanged(session);db.auth.onAuthStateChange((_event,s)=>{setTimeout(()=>sessionChanged(s),0)});}
-async function sessionChanged(session){user=session?.user||null;if(!user){hide('app');hide('logout');show('loginPanel');return}hide('loginPanel');show('app');show('logout');await load();}
-$('loginForm').onsubmit=async e=>{e.preventDefault();msg('loginMsg','Giriş yapılıyor...');const {error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});msg('loginMsg',error?error.message:'');};
-$('logout').onclick=()=>db.auth.signOut();
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+
+async function start() {
+  if(!configured) { show('setup'); return; }
+  db = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  const {data:{session}} = await db.auth.getSession();
+  await sessionChanged(session);
+  db.auth.onAuthStateChange((_event, s) => { setTimeout(() => sessionChanged(s), 0); });
+}
+
+async function sessionChanged(session) {
+  user = session?.user || null;
+  if(!user) { hide('app'); hide('logout'); show('loginPanel'); return; }
+  hide('loginPanel'); show('app'); show('logout'); await load();
+}
+
+$('loginForm').onsubmit = async e => {
+  e.preventDefault();
+  msg('loginMsg','Giriş yapılıyor...');
+  const {error} = await db.auth.signInWithPassword({email:$('email').value.trim(), password:$('password').value});
+  msg('loginMsg', error ? error.message : '');
+};
+
+$('logout').onclick = () => db.auth.signOut();
 
 async function load(){
   const profRes = await db.from('profiles').select('*');
