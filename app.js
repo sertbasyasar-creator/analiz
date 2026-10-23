@@ -72,6 +72,10 @@ function render(){
   
   $('list').innerHTML=arr.length?arr.map(p=>{
     const isOwner = p.user_id === user.id;
+    // Paylaşan kişinin adını bulalım
+    const ownerProfile = profiles.find(x => x.user_id === p.user_id);
+    const ownerName = ownerProfile?.full_name || ownerProfile?.contact_email || 'Meslektaşınız';
+
     return `
       <article class="publication">
         <h3>${safe(p.title)}</h3>
@@ -83,7 +87,7 @@ function render(){
           ${link(pubmedUrl(p),'PubMed')} 
           ${link(url(p.journal_url),'Dergi sayfası')} 
           <button class="secondary" data-action="share" data-id="${p.id}" data-type="publication">Paylaş</button>
-          ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>` : `<span class="muted" style="font-size:12px;">(Ortak Yayın)</span>`}
+          ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>` : `<span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px;">Paylaşan: ${safe(ownerName)}</span>`}
         </div>
       </article>
     `;
@@ -173,13 +177,17 @@ function renderPresentations(){
   
   listEl.innerHTML = filtered.map(p => {
     const isOwner = p.user_id === user.id;
+    // Paylaşan kişinin adını bulalım
+    const ownerProfile = profiles.find(x => x.user_id === p.user_id);
+    const ownerName = ownerProfile?.full_name || ownerProfile?.contact_email || 'Meslektaşınız';
+
     return `
       <article class="publication" style="margin-bottom:15px; padding:15px;">
         <h3>${safe(p.title)}</h3>
         <div class="actions" style="margin-top:10px;">
           <a class="button" href="${safe(p.file_url)}" target="_blank" rel="noopener noreferrer">Sunumu Aç / İndir</a>
           <button class="secondary" data-action="share" data-id="${p.id}" data-type="presentation">Paylaş</button>
-          ${isOwner ? `<button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>` : `<span class="muted" style="font-size:12px;">(Ortak Sunum)</span>`}
+          ${isOwner ? `<button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>` : `<span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px;">Paylaşan: ${safe(ownerName)}</span>`}
         </div>
       </article>
     `;
