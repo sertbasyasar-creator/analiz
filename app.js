@@ -196,11 +196,16 @@ $('presentationForm').onsubmit = async e => {
   await loadPresentations();
 };
 
-// --- PAYLAŞIM MODALI (KİMİNLE PAYLAŞACAKSIN?) ---
 async function openShareModal(itemId, itemType) {
-  // Sistemdeki diğer kullanıcıları (profilleri) çekelim
-  const { data: allProfiles } = await db.profiles.select('*') || { data: profiles };
-  const otherProfiles = (profiles || []).filter(p => p.user_id !== user.id);
+  // DÜZELTME BURADA: db.profiles yerine db.from('profiles') yapıldı
+  const { data: allProfiles, error } = await db.from('profiles').select('*');
+  
+  if(error) {
+    alert('Profiller alınamadı: ' + error.message);
+    return;
+  }
+
+  const otherProfiles = (allProfiles || []).filter(p => p.user_id !== user.id);
 
   if(!otherProfiles.length) {
     alert('Paylaşım yapabileceğiniz başka kayıtlı profil bulunamadı. Önce diğer kullanıcının "Profilim" sekmesinden adını kaydetmesini sağlayın.');
