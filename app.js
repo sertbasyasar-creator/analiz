@@ -26,23 +26,19 @@ $('loginForm').onsubmit=async e=>{e.preventDefault();msg('loginMsg','Giriş yap�
 $('logout').onclick=()=>db.auth.signOut();
 
 async function load(){
-  // 1. Profilleri ve tüm kullanıcıları çekelim
   const profRes = await db.from('profiles').select('*');
   profiles = profRes.data || [];
   profile = profiles.find(x => x.user_id === user.id) || {};
 
   for(const [k,v] of Object.entries({fullName:profile.full_name,institution:profile.institution,specialty:profile.specialty,orcid:profile.orcid,contactEmail:profile.contact_email,bio:profile.bio}))$(k).value=v||'';
 
-  // 2. Yayınları çek (Kendi yükledikleri VEYA benimle paylaşılanlar)
   const pubRes = await db.from('publications').select('*').order('year',{ascending:false});
   const shareRes = await db.from('publication_shares').select('publication_id').eq('shared_with_user_id', user.id);
   
   const sharedPubIds = new Set((shareRes.data || []).map(s => s.publication_id));
   const allPubs = pubRes.data || [];
 
-  // Kendi yayınlarım VEYA benimle paylaşılanlar
   publications = allPubs.filter(p => p.user_id === user.id || sharedPubIds.has(p.id));
-
   render();
 }
 
@@ -84,14 +80,14 @@ $('list').onclick=async e=>{
   
   if(b.dataset.action==='pdf'){
     const {data,error}=await db.storage.from('publication-pdfs').createSignedUrl(p.pdf_path,60);
-    if(error)alert(error.message);
+    if(error)showCustomAlert('Hata', error.message);
     else window.open(data.signedUrl,'_blank','noopener,noreferrer');
   }
   
   if(b.dataset.action==='delete'){
     showCustomConfirm('Yayını Sil', 'Bu yayını ve yüklenen PDF dosyasını silmek istiyor musunuz?', async () => {
       const {error}=await db.from('publications').delete().eq('id',p.id);
-      if(error)alert(error.message);
+      if(error)showCustomAlert('Hata', error.message);
       else{if(p.pdf_path)await db.storage.from('publication-pdfs').remove([p.pdf_path]);await load()}
     });
   }
@@ -103,7 +99,7 @@ publicationCategory:p.publication_category || 'unclassified',
 pubmedUrl:p.pubmed_url,journalUrl:p.journal_url,citationCount:p.citation_count,citationSource:p.citation_source,notes:p.notes};for(const [k,v] of Object.entries(fields))$(k).value=v??'';$('editTitle').textContent='Yayını düzenle';$('removePdf').checked=false;if(p.pdf_path){$('existingPdfName').textContent=p.pdf_path.split('/').pop();show('existingPdf');}else hide('existingPdf');tab('edit');}
 function resetEdit(){hide('existingPdf');$('removePdf').checked=false;$('publicationForm').reset();$('pubId').value='';$('citationCount').value=0;$('editTitle').textContent='Yeni yayın ekle';msg('saveMsg','');}
 $('cancelEdit').onclick=resetEdit;
-$('openExistingPdf').onclick=async()=>{const p=publications.find(x=>x.id===$('pubId').value);if(!p?.pdf_path)return;const {data,error}=await db.storage.from('publication-pdfs').createSignedUrl(p.pdf_path,120);if(error){msg('saveMsg',error.message);return;}window.open(data.signedUrl,'_blank','noopener,noreferrer');};
+$('openExistingPdf').onclick=async()=>{const p=publications.find(x=>x.id===$('pubId').value);if(!p?.pdf_path)return;const {data,error}=await db.storage.from('publication-pdfs').createSignedUrl(p.pdf_path,120);if(error){showCustomAlert('Hata', error.message);return;}window.open(data.signedUrl,'_blank','noopener,noreferrer');};
 $('doiLookup').onclick=async()=>{const doi=$('doi').value.trim().replace(/^https?:\/\/doi.org\//i,'');if(!doi){msg('saveMsg','Önce DOI girin.');return}msg('saveMsg','DOI sorgulanıyor...');try{const r=await fetch('https://api.crossref.org/works/'+encodeURIComponent(doi));if(!r.ok)throw Error('DOI bulunamadı');const m=(await r.json()).message;$('title').value=m.title?.[0]||'';$('authors').value=(m.author||[]).map(a=>[a.given,a.family].filter(Boolean).join(' ')).join('; ');$('journal').value=m['container-title']?.[0]||'';$('year').value=m.published?.['date-parts']?.[0]?.[0]||'';$('journalUrl').value=m.URL||'';msg('saveMsg','Bilgiler getirildi; kaydetmeden önce kontrol edin.')}catch(err){msg('saveMsg',err.message)}};
 
 $('publicationForm').onsubmit=async e=>{e.preventDefault();msg('saveMsg','Kaydediliyor...');const id=$('pubId').value;const doi=$('doi').value.trim().replace(/^https?:\/\/doi.org\//i,'');const data={user_id:user.id,title:$('title').value.trim(),authors:$('authors').value.trim(),journal:$('journal').value.trim(),year:$('year').value?Number($('year').value):null,doi,pmid:$('pmid').value.trim(),pubmed_url:$('pubmedUrl').value.trim()||null,journal_url:$('journalUrl').value.trim()||null,
@@ -117,7 +113,7 @@ citation_count:Number($('citationCount').value)||0,citation_source:$('citationSo
 $('profileForm').onsubmit=async e=>{e.preventDefault();const p={user_id:user.id,full_name:$('fullName').value,institution:$('institution').value,specialty:$('specialty').value,orcid:$('orcid').value,contact_email:$('contactEmail').value,bio:$('bio').value};const {error}=await db.from('profiles').upsert(p);msg('profileMsg',error?error.message:'Profil kaydedildi.');if(!error)profile=p;};
 function renderCv(){$('cvChoices').innerHTML=publications.map(p=>`<div class="cvline"><label><input type="checkbox" class="cvcheck" value="${p.id}" checked>${safe(p.title)} (${safe(p.year)})</label></div>`).join('')||'<p>Önce yayın ekleyin.</p>'}
 
-// --- SUNUMLAR YÖNETİMİ (KİŞİYE ÖZEL + PAYLAŞIMLI) ---
+// --- SUNUMLAR YÖNETİMİ ---
 async function loadPresentations(){
   const presRes = await db.from('presentations').select('*').order('created_at', {ascending: false});
   const shareRes = await db.from('presentation_shares').select('presentation_id').eq('shared_with_user_id', user.id);
@@ -176,7 +172,6 @@ $('presentationForm').onsubmit = async e => {
   const { data: publicURLData } = db.storage.from('sunumlar').getPublicUrl(filePath);
   const file_url = publicURLData.publicUrl;
 
-  // user_id ile birlikte kaydedelim
   const { error: dbError } = await db.from('presentations').insert([{ title, file_url, user_id: user.id }]);
 
   if(dbError){
@@ -197,18 +192,17 @@ $('presentationForm').onsubmit = async e => {
 };
 
 async function openShareModal(itemId, itemType) {
-  // DÜZELTME BURADA: db.profiles yerine db.from('profiles') yapıldı
   const { data: allProfiles, error } = await db.from('profiles').select('*');
   
   if(error) {
-    alert('Profiller alınamadı: ' + error.message);
+    showCustomAlert('Hata', 'Profiller alınamadı: ' + error.message);
     return;
   }
 
   const otherProfiles = (allProfiles || []).filter(p => p.user_id !== user.id);
 
   if(!otherProfiles.length) {
-    alert('Paylaşım yapabileceğiniz başka kayıtlı profil bulunamadı. Önce diğer kullanıcının "Profilim" sekmesinden adını kaydetmesini sağlayın.');
+    showCustomAlert('Uyarı', 'Paylaşım yapabileceğiniz başka kayıtlı profil bulunamadı. Önce diğer kullanıcının "Profilim" sekmesinden adını kaydetmesini sağlayın.');
     return;
   }
 
@@ -243,13 +237,30 @@ async function openShareModal(itemId, itemType) {
 
     backdrop.remove();
     if(error) {
-      alert('Paylaşım hatası (Zaten paylaşılmış olabilir): ' + error.message);
+      showCustomAlert('Paylaşım Hatası', 'Zaten paylaşılmış olabilir: ' + error.message);
     } else {
-      alert('İçerik başarıyla paylaşıldı!');
+      showCustomAlert('Başarılı', 'İçerik başarıyla paylaşıldı!');
     }
   };
 
   backdrop.querySelector('#modalShareCancel').onclick = () => backdrop.remove();
+}
+
+// ŞIK BİLGİLENDİRME MODALI (ALERT YERİNE)
+function showCustomAlert(title, text) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'custom-modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="custom-modal">
+      <h3>${safe(title)}</h3>
+      <p>${safe(text)}</p>
+      <div class="custom-modal-actions">
+        <button id="modalOk">Tamam</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#modalOk').onclick = () => backdrop.remove();
 }
 
 // ŞIK ÖZEL ONAY MODALI (CONFIRM YERİNE)
@@ -302,7 +313,7 @@ $('presentationsList').onclick = async e => {
       }
 
       const { error } = await db.from('presentations').delete().eq('id', id);
-      if(error) alert('Silme hatası: ' + error.message);
+      if(error) showCustomAlert('Hata', error.message);
       else await loadPresentations();
     });
   }
@@ -344,7 +355,7 @@ $('printCv').onclick = () => {
   }).join('');
 
   const w = window.open('', '_blank');
-  if (!w) { alert('Tarayıcı açılır pencereyi engelledi.'); return; }
+  if (!w) { showCustomAlert('Hata', 'Tarayıcı açılır pencereyi engelledi.'); return; }
 
   const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunmuyor.</p>'}</body></html>`;
 
