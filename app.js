@@ -72,7 +72,6 @@ function render(){
   
   $('list').innerHTML=arr.length?arr.map(p=>{
     const isOwner = p.user_id === user.id;
-    // Paylaşan kişinin adını bulalım
     const ownerProfile = profiles.find(x => x.user_id === p.user_id);
     const ownerName = ownerProfile?.full_name || ownerProfile?.contact_email || 'Meslektaşınız';
 
@@ -88,8 +87,8 @@ function render(){
           ${link(url(p.journal_url),'Dergi sayfası')} 
           <button class="secondary" data-action="share" data-id="${p.id}" data-type="publication">Paylaş</button>
           ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>` : `
-  <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500;">Paylaşan: ${safe(ownerName)}</span>
-  <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Ortak Yayın</span>
+  <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Yayın</span>
+  <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
 `}
         </div>
       </article>
@@ -105,7 +104,6 @@ $('list').onclick = async e => {
   if(!p)return;
   
   if(b.dataset.action==='edit') {
-    // GÜVENLİK: Sadece asıl sahibi düzenleyebilir
     if(p.user_id !== user.id) {
       showCustomAlert('Yetkisiz İşlem', 'Bu yayını düzenleme yetkiniz yok, çünkü bu yayın sizinle paylaşılmıştır.');
       return;
@@ -122,7 +120,6 @@ $('list').onclick = async e => {
   }
   
   if(b.dataset.action==='delete'){
-    // GÜVENLİK: Sadece asıl sahibi silebilir!
     if(p.user_id !== user.id) {
       showCustomAlert('Yetkisiz İşlem', 'Bu yayını silme yetkiniz yok, çünkü bu yayın sizinle paylaşılmıştır.');
       return;
@@ -180,7 +177,6 @@ function renderPresentations(){
   
   listEl.innerHTML = filtered.map(p => {
     const isOwner = p.user_id === user.id;
-    // Paylaşan kişinin adını bulalım
     const ownerProfile = profiles.find(x => x.user_id === p.user_id);
     const ownerName = ownerProfile?.full_name || ownerProfile?.contact_email || 'Meslektaşınız';
 
@@ -191,8 +187,8 @@ function renderPresentations(){
           <a class="button" href="${safe(p.file_url)}" target="_blank" rel="noopener noreferrer">Sunumu Aç / İndir</a>
           <button class="secondary" data-action="share" data-id="${p.id}" data-type="presentation">Paylaş</button>
           ${isOwner ? `<button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>` : `
-  <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500;">Paylaşan: ${safe(ownerName)}</span>
-  <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Ortak Sunum</span>
+  <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Sunum</span>
+  <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
 `}
         </div>
       </article>
@@ -399,7 +395,7 @@ $('printCv').onclick = () => {
   };
 
   const sections = categories.map(([key, label]) => {
-    const group = rows.filter(p => (p.publication_category || 'unclassified') === key);
+    const group = rows.p(p => (p.publication_category || 'unclassified') === key);
     if (!group.length) return '';
     return `<section><h2>${safe(label)} (${group.length})</h2><ol>${group.map(formatPublication).join('')}</ol></section>`;
   }).join('');
@@ -407,7 +403,7 @@ $('printCv').onclick = () => {
   const w = window.open('', '_blank');
   if (!w) { showCustomAlert('Hata', 'Tarayıcı açılır pencereyi engelledi.'); return; }
 
-  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunmuyor.</p>'}</body></html>`;
+  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademig CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunmuyor.</p>'}</body></html>`;
 
   w.document.write(html);
   w.document.close();
@@ -415,5 +411,5 @@ $('printCv').onclick = () => {
   setTimeout(() => w.print(), 300);
 };
 
-$('exportJson').onclick=()=>{const blob=new Blob([JSON.stringify({profile,publications:publications.map(({pdf_path,...rest})=>rest)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='akademik-yayinlar-yedek.json';a.click();URL.revokeObjectURL(a.href);};
+exportJson.onclick=()=>{const blob=new Blob([JSON.stringify({profile,publications:publications.map(({pdf_path,...rest})=>rest)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='akademik-yayinlar-yedek.json';a.click();URL.revokeObjectURL(a.href);};
 start().catch(e=>msg('globalMsg',e.message));
