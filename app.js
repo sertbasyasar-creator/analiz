@@ -69,13 +69,21 @@ function render(){
 }
 $('search').oninput=render;
 
-$('list').onclick=async e=>{
+$('list').onclick = async e => {
   const b=e.target.closest('button[data-action]');
   if(!b)return;
   const p=publications.find(x=>x.id===b.dataset.id);
   if(!p)return;
   
-  if(b.dataset.action==='edit')edit(p);
+  if(b.dataset.action==='edit') {
+    // GÜVENLİK: Sadece asıl sahibi düzenleyebilir
+    if(p.user_id !== user.id) {
+      showCustomAlert('Yetkisiz İşlem', 'Bu yayını düzenleme yetkiniz yok, çünkü bu yayın sizinle paylaşılmıştır.');
+      return;
+    }
+    edit(p);
+  }
+
   if(b.dataset.action==='share') openShareModal(p.id, 'publication');
   
   if(b.dataset.action==='pdf'){
@@ -85,6 +93,12 @@ $('list').onclick=async e=>{
   }
   
   if(b.dataset.action==='delete'){
+    // GÜVENLİK: Sadece asıl sahibi silebilir!
+    if(p.user_id !== user.id) {
+      showCustomAlert('Yetkisiz İşlem', 'Bu yayını silme yetkiniz yok, çünkü bu yayın sizinle paylaşılmıştır.');
+      return;
+    }
+
     showCustomConfirm('Yayını Sil', 'Bu yayını ve yüklenen PDF dosyasını silmek istiyor musunuz?', async () => {
       const {error}=await db.from('publications').delete().eq('id',p.id);
       if(error)showCustomAlert('Hata', error.message);
