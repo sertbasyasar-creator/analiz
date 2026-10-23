@@ -87,7 +87,10 @@ function render(){
           ${link(pubmedUrl(p),'PubMed')} 
           ${link(url(p.journal_url),'Dergi sayfası')} 
           <button class="secondary" data-action="share" data-id="${p.id}" data-type="publication">Paylaş</button>
-          ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>` : `<span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px;">Paylaşan: ${safe(ownerName)}</span>`}
+          ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>` : `
+  <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500;">Paylaşan: ${safe(ownerName)}</span>
+  <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Ortak Yayın</span>
+`}
         </div>
       </article>
     `;
@@ -187,7 +190,10 @@ function renderPresentations(){
         <div class="actions" style="margin-top:10px;">
           <a class="button" href="${safe(p.file_url)}" target="_blank" rel="noopener noreferrer">Sunumu Aç / İndir</a>
           <button class="secondary" data-action="share" data-id="${p.id}" data-type="presentation">Paylaş</button>
-          ${isOwner ? `<button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>` : `<span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px;">Paylaşan: ${safe(ownerName)}</span>`}
+          ${isOwner ? `<button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>` : `
+  <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500;">Paylaşan: ${safe(ownerName)}</span>
+  <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Ortak Sunum</span>
+`}
         </div>
       </article>
     `;
