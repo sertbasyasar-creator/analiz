@@ -439,6 +439,35 @@ $('printCv').onclick = () => {
   w.focus();
   setTimeout(() => w.print(), 300);
 };
+// --- SEÇİLEN YAYINLARI E-POSTA İLE GÖNDERME ---
+const emailBtn = document.createElement('button');
+emailBtn.id = 'emailSelectedPubs';
+emailBtn.className = 'secondary';
+emailBtn.textContent = 'Seçilen Yayınları E-posta ile Gönder';
+emailBtn.style.marginLeft = '8px';
 
+// Butonu CV / Çıktı sekmesindeki actions div'inin içine ekleyelim
+document.querySelector('#cv .actions').appendChild(emailBtn);
+
+emailBtn.onclick = () => {
+  const ids = new Set([...document.querySelectorAll('.cvcheck:checked')].map(x => x.value));
+  const rows = publications.filter(p => ids.has(String(p.id)));
+
+  if(!rows.length) {
+    showCustomAlert('Uyarı', 'Lütfen e-posta ile göndermek için en az bir yayın seçin.');
+    return;
+  }
+
+  // Yayınları düzgün bir metin formatına dönüştürelim
+  const pubText = rows.map((p, index) => {
+    return `${index + 1}. ${p.authors || 'Yazar belirtilmemiş'}. (${p.year || 'Yıl yok'}). ${p.title}. ${p.journal || ''}. ${p.doi ? 'DOI: ' + p.doi : ''}`;
+  }).join('\n\n');
+
+  const subject = encodeURIComponent('Akademik Yayın Listesi');
+  const body = encodeURIComponent(`Merhaba,\n\nPaylaşmak istediğim akademik yayın listesi aşağıdadır:\n\n${pubText}\n\nSaygılarımla.`);
+
+  // Kullanıcının varsayılan mail uygulamasını açalım
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+};
 exportJson.onclick=()=>{const blob=new Blob([JSON.stringify({profile,publications:publications.map(({pdf_path,...rest})=>rest)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='akademik-yayinlar-yedek.json';a.click();URL.revokeObjectURL(a.exportJson);};
 start().catch(e=>msg('globalMsg',e.message));
