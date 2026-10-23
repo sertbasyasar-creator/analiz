@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const $ = id => document.getElementById(id);
 const cfg=window.APP_CONFIG || {};
 const configured=cfg.supabaseUrl?.startsWith('https://') && cfg.supabaseAnonKey && !cfg.supabaseAnonKey.startsWith('SUPABASE_');
-let db, user, publications=[], presentations=[], profiles=[], profile={};
+let db, user, publications=[], presentations=[], profiles=[], pubShares=[], presShares=[], profile={};
 const show=id=>$(id).classList.remove('hidden'), hide=id=>$(id).classList.add('hidden');
 const msg=(id,s)=>$(id).textContent=s;
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -55,9 +55,10 @@ async function load(){
   for(const [k,v] of Object.entries({fullName:profile.full_name,institution:profile.institution,specialty:profile.specialty,orcid:profile.orcid,contactEmail:profile.contact_email,bio:profile.bio}))$(k).value=v||'';
 
   const pubRes = await db.from('publications').select('*').order('year',{ascending:false});
-  const shareRes = await db.from('publication_shares').select('publication_id').eq('shared_with_user_id', user.id);
-  
-  const sharedPubIds = new Set((shareRes.data || []).map(s => s.publication_id));
+  const shareRes = await db.from('publication_shares').select('*');
+  pubShares = shareRes.data || [];
+
+  const sharedPubIds = new Set(pubShares.filter(s => s.shared_with_user_id === user.id).map(s => s.publication_id));
   const allPubs = pubRes.data || [];
 
   publications = allPubs.filter(p => p.user_id === user.id || sharedPubIds.has(p.id));
@@ -75,6 +76,17 @@ function render(){
     const ownerProfile = profiles.find(x => x.user_id === p.user_id);
     const ownerName = ownerProfile?.full_name || ownerProfile?.contact_email || 'Meslektaşınız';
 
+    // Bu yayın kimlerle paylaşılmış?
+    const myShares = pubShares.filter(s => s.publication_id === p.id);
+    let sharedWithText = '';
+    if(isOwner && myShares.length > 0) {
+      const names = myShares.map(s => {
+        const uProf = profiles.find(x => x.user_id === s.shared_with_user_id);
+        return uProf?.full_name || uProf?.contact_email || 'Biri';
+      }).join(', ');
+      sharedWithText = `<span class="muted" style="font-size:12px; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşıldı: ${safe(names)}</span>`;
+    }
+
     return `
       <article class="publication">
         <h3>${safe(p.title)}</h3>
@@ -86,7 +98,7 @@ function render(){
           ${link(pubmedUrl(p),'PubMed')} 
           ${link(url(p.journal_url),'Dergi sayfası')} 
           <button class="secondary" data-action="share" data-id="${p.id}" data-type="publication">Paylaş</button>
-          ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>` : `
+          ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>${sharedWithText}` : `
   <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Yayın</span>
   <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
 `}
@@ -156,9 +168,10 @@ function renderCv(){$('cvChoices').innerHTML=publications.map(p=>`<div class="cv
 // --- SUNUMLAR YÖNETİMİ ---
 async function loadPresentations(){
   const presRes = await db.from('presentations').select('*').order('created_at', {ascending: false});
-  const shareRes = await db.from('presentation_shares').select('presentation_id').eq('shared_with_user_id', user.id);
-  
-  const sharedPresIds = new Set((shareRes.data || []).map(s => s.presentation_id));
+  const shareRes = await db.from('presentation_shares').select('*');
+  presShares = shareRes.data || [];
+
+  const sharedPresIds = new Set(presShares.filter(s => s.shared_with_user_id === user.id).map(s => s.presentation_id));
   const allPres = presRes.data || [];
 
   presentations = allPres.filter(p => p.user_id === user.id || sharedPresIds.has(p.id));
@@ -180,13 +193,23 @@ function renderPresentations(){
     const ownerProfile = profiles.find(x => x.user_id === p.user_id);
     const ownerName = ownerProfile?.full_name || ownerProfile?.contact_email || 'Meslektaşınız';
 
+    const myShares = presShares.filter(s => s.presentation_id === p.id);
+    let sharedWithText = '';
+    if(isOwner && myShares.length > 0) {
+      const names = myShares.map(s => {
+        const uProf = profiles.find(x => x.user_id === s.shared_with_user_id);
+        return uProf?.full_name || uProf?.contact_email || 'Biri';
+      }).join(', ');
+      sharedWithText = `<span class="muted" style="font-size:12px; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşıldı: ${safe(names)}</span>`;
+    }
+
     return `
       <article class="publication" style="margin-bottom:15px; padding:15px;">
         <h3>${safe(p.title)}</h3>
         <div class="actions" style="margin-top:10px;">
           <a class="button" href="${safe(p.file_url)}" target="_blank" rel="noopener noreferrer">Sunumu Aç / İndir</a>
           <button class="secondary" data-action="share" data-id="${p.id}" data-type="presentation">Paylaş</button>
-          ${isOwner ? `<button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>` : `
+          ${isOwner ? `<button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>${sharedWithText}` : `
   <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Sunum</span>
   <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
 `}
@@ -286,13 +309,14 @@ async function openShareModal(itemId, itemType) {
       showCustomAlert('Paylaşım Hatası', 'Zaten paylaşılmış olabilir: ' + error.message);
     } else {
       showCustomAlert('Başarılı', 'İçerik başarıyla paylaşıldı!');
+      if(itemType === 'publication') await load();
+      else await loadPresentations();
     }
   };
 
   backdrop.querySelector('#modalShareCancel').onclick = () => backdrop.remove();
 }
 
-// ŞIK BİLGİLENDİRME MODALI (ALERT YERİNE)
 function showCustomAlert(title, text) {
   const backdrop = document.createElement('div');
   backdrop.className = 'custom-modal-backdrop';
@@ -309,7 +333,6 @@ function showCustomAlert(title, text) {
   backdrop.querySelector('#modalOk').onclick = () => backdrop.remove();
 }
 
-// ŞIK ÖZEL ONAY MODALI (CONFIRM YERİNE)
 function showCustomConfirm(title, text, onConfirm) {
   const backdrop = document.createElement('div');
   backdrop.className = 'custom-modal-backdrop';
@@ -345,6 +368,12 @@ $('presentationsList').onclick = async e => {
   }
 
   if(btn.classList.contains('delete-pres')) {
+    const p = presentations.find(x => x.id === id);
+    if (!p || p.user_id !== user.id) {
+      showCustomAlert('Yetkisiz İşlem', 'Bu sunumu silme yetkiniz yok, çünkü bu sunum sizinle paylaşılmıştır.');
+      return;
+    }
+
     showCustomConfirm('Sunumu Sil', 'Bu sunumu silmek istediğinize emin misiniz?', async () => {
       const fileUrl = btn.dataset.url;
       try {
@@ -395,7 +424,7 @@ $('printCv').onclick = () => {
   };
 
   const sections = categories.map(([key, label]) => {
-    const group = rows.p(p => (p.publication_category || 'unclassified') === key);
+    const group = rows.filter(p => (p.publication_category || 'unclassified') === key);
     if (!group.length) return '';
     return `<section><h2>${safe(label)} (${group.length})</h2><ol>${group.map(formatPublication).join('')}</ol></section>`;
   }).join('');
@@ -403,7 +432,7 @@ $('printCv').onclick = () => {
   const w = window.open('', '_blank');
   if (!w) { showCustomAlert('Hata', 'Tarayıcı açılır pencereyi engelledi.'); return; }
 
-  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademig CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunmuyor.</p>'}</body></html>`;
+  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunmuyor.</p>'}</body></html>`;
 
   w.document.write(html);
   w.document.close();
@@ -411,5 +440,5 @@ $('printCv').onclick = () => {
   setTimeout(() => w.print(), 300);
 };
 
-exportJson.onclick=()=>{const blob=new Blob([JSON.stringify({profile,publications:publications.map(({pdf_path,...rest})=>rest)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='akademik-yayinlar-yedek.json';a.click();URL.revokeObjectURL(a.href);};
+exportJson.onclick=()=>{const blob=new Blob([JSON.stringify({profile,publications:publications.map(({pdf_path,...rest})=>rest)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='akademik-yayinlar-yedek.json';a.click();URL.revokeObjectURL(a.exportJson);};
 start().catch(e=>msg('globalMsg',e.message));
