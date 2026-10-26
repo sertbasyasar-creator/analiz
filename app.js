@@ -286,7 +286,7 @@ $('presentationForm').onsubmit = async e => {
 
   setTimeout(() => {
     msg('presMsg', '');
-    $('presMsg', 'message'); // Düzeltildi
+    $('presMsg').className = 'message';
   }, 3000);
 
   $('presentationForm').reset();
@@ -474,7 +474,6 @@ $('printCv').onclick = () => {
   const formatPublication = p => {
     const volume = p.volume ? safe(p.volume) : '';
     const issue = p.issue ? '(' + safe(p.issue) + ')' : '';
-    .pages?':'+safe(p.pages):''; // Düzeltildi
     const details = volume + issue + (p.pages ? ':' + safe(p.pages) : '');
     const article = p.article_number ? ' Makale no: ' + safe(p.article_number) + '.' : '';
     const doi = p.doi ? ' DOI: ' + safe(p.doi) : '';
@@ -491,7 +490,7 @@ $('printCv').onclick = () => {
   const w = window.open('', '_blank');
   if (!w) { showCustomAlert('Hata', 'Tarayıcı açılır pencereyi engelledi.'); return; }
 
-  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunvuyor.</p>'}</body></html>`;
+  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Total ${rows.length}</h2>${sections || '<p>Seçili yayın bulunvuyor.</p>'}</body></html>`;
 
   w.document.write(html);
   w.document.close();
