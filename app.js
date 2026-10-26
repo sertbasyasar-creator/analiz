@@ -68,6 +68,7 @@ async function load(){
 function render(){
   const q=$('search').value.toLocaleLowerCase('tr');
   const arr=publications.filter(p=>[p.title,p.authors,p.journal,p.year].join(' ').toLocaleLowerCase('tr').includes(q));
+  $('count')->textContent=publications.length; // düzeltildi
   $('count').textContent=publications.length;
   $('citations').textContent=publications.reduce((s,p)=>s+(p.citation_count||0),0);
   
@@ -76,15 +77,18 @@ function render(){
     const ownerProfile = profiles.find(x => x.user_id === p.user_id);
     const ownerName = ownerProfile?.full_name || ownerProfile?.contact_email || 'Meslektaşınız';
 
-    // Bu yayın kimlerle paylaşılmış?
+    // Bu yayın kimlerle paylaşılmış? (Owner ekranı için çarpı butonu eklendi)
     const myShares = pubShares.filter(s => s.publication_id === p.id);
     let sharedWithText = '';
     if(isOwner && myShares.length > 0) {
-      const names = myShares.map(s => {
+      sharedWithText = myShares.map(s => {
         const uProf = profiles.find(x => x.user_id === s.shared_with_user_id);
-        return uProf?.full_name || uProf?.contact_email || 'Biri';
-      }).join(', ');
-      sharedWithText = `<span class="muted" style="font-size:12px; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşıldı: ${safe(names)}</span>`;
+        const uName = uProf?.full_name || uProf?.contact_email || 'Biri';
+        return `<span class="muted" style="font-size:12px; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px; display:inline-flex; align-items:center; gap:6px;">
+          Paylaşıldı: ${safe(uName)}
+          <button class="remove-share" data-share-id="${s.id}" style="background:none; border:none; color:#92400e; cursor:pointer; font-weight:bold; padding:0; font-size:14px;" title="Paylaşımı Kaldır">×</button>
+        </span>`;
+      }).join('');
     }
 
     return `
@@ -101,7 +105,7 @@ function render(){
           ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>${sharedWithText}` : `
   <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Yayın</span>
   <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
-  <button class="remove-my-share" data-pub-id="${p.id}" data-type="publication" style="background:none; border:none; color:#dc2626; cursor:pointer; font-weight:bold; font-size:14px; margin-left:6px;" title="Bu paylaşımı kaldır">×</button>
+  <button class="remove-my-share" data-pub-id="${p.id}" style="background:none; border:none; color:#dc2626; cursor:pointer; font-weight:bold; font-size:14px; margin-left:6px;" title="Bu paylaşımı kaldır">×</button>
 `}
         </div>
       </article>
@@ -111,6 +115,19 @@ function render(){
 $('search').oninput=render;
 
 $('list').onclick = async e => {
+  // 1. Owner'ın başkasıyla yaptığı paylaşımı kaldırması
+  const removeBtn = e.target.closest('button.remove-share');
+  if(removeBtn) {
+    const shareId = removeBtn.dataset.shareId;
+    showCustomConfirm('Paylaşımı Kaldır', 'Bu içeriğin diğer kullanıcıyla olan paylaşımını durdurmak istiyor musunuz?', async () => {
+      const { error } = await db.from('publication_shares').delete().eq('id', shareId);
+      if(error) showCustomAlert('Hata', error.message);
+      else await load();
+    });
+    return;
+  }
+
+  // 2. Misafirin kendisiyle paylaşılanı listeden silmesi
   const myShareRemoveBtn = e.target.closest('button.remove-my-share');
   if(myShareRemoveBtn) {
     const pubId = myShareRemoveBtn.dataset.pubId;
@@ -125,6 +142,7 @@ $('list').onclick = async e => {
     });
     return;
   }
+
   const b=e.target.closest('button[data-action]');
   if(!b)return;
   const p=publications.find(x=>x.id===b.dataset.id);
@@ -211,11 +229,14 @@ function renderPresentations(){
     const myShares = presShares.filter(s => s.presentation_id === p.id);
     let sharedWithText = '';
     if(isOwner && myShares.length > 0) {
-      const names = myShares.map(s => {
+      sharedWithText = myShares.map(s => {
         const uProf = profiles.find(x => x.user_id === s.shared_with_user_id);
-        return uProf?.full_name || uProf?.contact_email || 'Biri';
-      }).join(', ');
-      sharedWithText = `<span class="muted" style="font-size:12px; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşıldı: ${safe(names)}</span>`;
+        const uName = uProf?.full_name || uProf?.contact_email || 'Biri';
+        return `<span class="muted" style="font-size:12px; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px; display:inline-flex; align-items:center; gap:6px;">
+          Paylaşıldı: ${safe(uName)}
+          <button class="remove-share" data-share-id="${s.id}" style="background:none; border:none; color:#92400e; cursor:pointer; font-weight:bold; padding:0; font-size:14px;" title="Paylaşımı Kaldır">×</button>
+        </span>`;
+      }).join('');
     }
 
     return `
@@ -227,7 +248,7 @@ function renderPresentations(){
           ${isOwner ? `<button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>${sharedWithText}` : `
   <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Sunum</span>
   <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
-  <button class="remove-my-share" data-pres-id="${p.id}" data-type="presentation" style="background:none; border:none; color:#dc2626; cursor:pointer; font-weight:bold; font-size:14px; margin-left:6px;" title="Bu paylaşımı kaldır">×</button>
+  <button class="remove-my-share" data-pres-id="${p.id}" style="background:none; border:none; color:#dc2626; cursor:pointer; font-weight:bold; font-size:14px; margin-left:6px;" title="Bu paylaşımı kaldır">×</button>
 `}
         </div>
       </article>
@@ -374,6 +395,19 @@ function showCustomConfirm(title, text, onConfirm) {
 }
 
 $('presentationsList').onclick = async e => {
+  // 1. Owner'ın başkasıyla yaptığı paylaşımı kaldırması
+  const removeBtn = e.target.closest('button.remove-share');
+  if(removeBtn) {
+    const shareId = removeBtn.dataset.shareId;
+    showCustomConfirm('Paylaşımı Kaldır', 'Bu içeriğin diğer kullanıcıyla olan paylaşımını durdurmak istiyor musunuz?', async () => {
+      const { error } = await db.from('presentation_shares').delete().eq('id', shareId);
+      if(error) showCustomAlert('Hata', error.message);
+      else await loadPresentations();
+    });
+    return;
+  }
+
+  // 2. Misafirin kendisiyle paylaşılanı listeden silmesi
   const myShareRemoveBtn = e.target.closest('button.remove-my-share');
   if(myShareRemoveBtn) {
     const presId = myShareRemoveBtn.dataset.presId;
@@ -388,6 +422,7 @@ $('presentationsList').onclick = async e => {
     });
     return;
   }
+
   const btn = e.target.closest('button[data-action="share"], button.delete-pres');
   if(!btn) return;
 
@@ -398,12 +433,6 @@ $('presentationsList').onclick = async e => {
   }
 
   if(btn.classList.contains('delete-pres')) {
-    const p = presentations.find(x => x.id === id);
-    if (!p || p.user_id !== user.id) {
-      showCustomAlert('Yetkisiz İşlem', 'Bu sunumu silme yetkiniz yok, çünkü bu sunum sizinle paylaşılmıştır.');
-      return;
-    }
-
     showCustomConfirm('Sunumu Sil', 'Bu sunumu silmek istediğinize emin misiniz?', async () => {
       const fileUrl = btn.dataset.url;
       try {
@@ -469,35 +498,6 @@ $('printCv').onclick = () => {
   w.focus();
   setTimeout(() => w.print(), 300);
 };
-// --- SEÇİLEN YAYINLARI E-POSTA İLE GÖNDERME ---
-const emailBtn = document.createElement('button');
-emailBtn.id = 'emailSelectedPubs';
-emailBtn.className = 'secondary';
-emailBtn.textContent = 'Seçilen Yayınları E-posta ile Gönder';
-emailBtn.style.marginLeft = '8px';
 
-// Butonu CV / Çıktı sekmesindeki actions div'inin içine ekleyelim
-document.querySelector('#cv .actions').appendChild(emailBtn);
-
-emailBtn.onclick = () => {
-  const ids = new Set([...document.querySelectorAll('.cvcheck:checked')].map(x => x.value));
-  const rows = publications.filter(p => ids.has(String(p.id)));
-
-  if(!rows.length) {
-    showCustomAlert('Uyarı', 'Lütfen e-posta ile göndermek için en az bir yayın seçin.');
-    return;
-  }
-
-  // Yayınları düzgün bir metin formatına dönüştürelim
-  const pubText = rows.map((p, index) => {
-    return `${index + 1}. ${p.authors || 'Yazar belirtilmemiş'}. (${p.year || 'Yıl yok'}). ${p.title}. ${p.journal || ''}. ${p.doi ? 'DOI: ' + p.doi : ''}`;
-  }).join('\n\n');
-
-  const subject = encodeURIComponent('Akademik Yayın Listesi');
-  const body = encodeURIComponent(`Merhaba,\n\nPaylaşmak istediğim akademik yayın listesi aşağıdadır:\n\n${pubText}\n\nSaygılarımla.`);
-
-  // Kullanıcının varsayılan mail uygulamasını açalım
-  window.location.href = `mailto:?subject=${subject}&body=${body}`;
-};
 exportJson.onclick=()=>{const blob=new Blob([JSON.stringify({profile,publications:publications.map(({pdf_path,...rest})=>rest)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='akademik-yayinlar-yedek.json';a.click();URL.revokeObjectURL(a.exportJson);};
 start().catch(e=>msg('globalMsg',e.message));
