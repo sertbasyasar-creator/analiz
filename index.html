@@ -23,10 +23,17 @@
       <small>Özel akademik arşiv · V1</small>
     </div>
   </div>
-  <button id="logout" class="secondary hidden">Çıkış</button>
+  <button id="logout" type="button" class="secondary hidden">Çıkış</button>
 </header>
 
 <main>
+
+<noscript>
+  <section class="panel">
+    <h2>JavaScript gerekli</h2>
+    <p>Bu uygulama çalışmak için JavaScript'e ihtiyaç duyar. Lütfen tarayıcınızda JavaScript'i etkinleştirin.</p>
+  </section>
+</noscript>
 
 <section id="setup" class="panel hidden">
   <h2>Kurulum gerekiyor</h2>
@@ -39,27 +46,27 @@
   <form id="loginForm">
     <label>E-posta<input id="email" type="email" autocomplete="username" required></label>
     <label>Şifre<input id="password" type="password" autocomplete="current-password" required></label>
-    <div class="actions"><button class="block">Giriş yap</button></div>
+    <div class="actions"><button type="submit" class="block">Giriş yap</button></div>
   </form>
-  <p id="loginMsg" class="message"></p>
+  <p id="loginMsg" class="message" role="status" aria-live="polite"></p>
 </section>
 
 <div id="app" class="hidden">
 
 <nav class="tabs" aria-label="Bölümler">
-  <button data-tab="publications" class="selected">
+  <button type="button" data-tab="publications" class="selected">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>Yayınlarım
   </button>
-  <button data-tab="edit">
+  <button type="button" data-tab="edit">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Yayın ekle
   </button>
-  <button data-tab="presentationsTab">
+  <button type="button" data-tab="presentationsTab">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8"/></svg>Sunumlar
   </button>
-  <button data-tab="cv">
+  <button type="button" data-tab="cv">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>CV / Çıktı
   </button>
-  <button data-tab="profile">
+  <button type="button" data-tab="profile">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Profilim
   </button>
 </nav>
@@ -83,20 +90,17 @@
 
     <h2 class="form-section">Tanımlayıcılar</h2>
     <div class="columns">
-      <label>DOI<input id="doi" placeholder="10.xxxx/xxxxx"></label>
-      <label>PMID<input id="pmid" placeholder="PubMed kimliği"></label>
+      <label>DOI<input id="doi" placeholder="10.xxxx/xxxxx" spellcheck="false" autocomplete="off"></label>
+      <label>PMID<input id="pmid" placeholder="PubMed kimliği" inputmode="numeric" spellcheck="false" autocomplete="off"></label>
     </div>
     <div class="actions tight"><button id="doiLookup" type="button" class="secondary">DOI ile bilgileri getir</button></div>
 
     <h2 class="form-section">Yayın bilgileri</h2>
     <label>Makale başlığı *<input id="title" required></label>
     <label>Yazarlar<input id="authors" placeholder="Soyadı Adı; Soyadı Adı"></label>
+    <label>Dergi<input id="journal"></label>
     <div class="columns">
-      <label>Dergi<input id="journal"></label>
       <label>Yıl<input id="year" type="number" min="1900" max="2100"></label>
-    </div>
-
-    <div class="columns">
       <label>Yayın kategorisi
         <select id="publicationCategory">
           <option value="unclassified">Sınıflandırılmamış</option>
@@ -137,14 +141,14 @@
       </div>
       <label class="check"><input id="removePdf" type="checkbox"> Mevcut PDF dosyasını kaldır</label>
     </div>
-    <label>PDF dosyası <span class="hint">(özel depoya yüklenir; yeni dosya seçerseniz eskisinin yerini alır)</span><input id="pdf" type="file" accept="application/pdf"></label>
+    <label>PDF dosyası <span class="hint">(özel depoya yüklenir, en fazla 25 MB; yeni dosya seçerseniz eskisinin yerini alır)</span><input id="pdf" type="file" accept="application/pdf"></label>
     <label>Notlar<textarea id="notes" rows="3"></textarea></label>
 
     <div class="actions">
       <button type="submit">Yayını kaydet</button>
       <button type="button" id="cancelEdit" class="secondary">Temizle</button>
     </div>
-    <p class="message" id="saveMsg"></p>
+    <p class="message" id="saveMsg" role="status" aria-live="polite"></p>
   </form>
 </section>
 
@@ -157,7 +161,7 @@
     <label>Sunum başlığı *<input id="presTitle" required placeholder="Örn: Kronik Hastalıklar Sunumu"></label>
     <label>Dosya (PPTX, PDF vb.) *<input id="presFile" type="file" required accept=".pptx,.pdf,.ppt,.ppsx"></label>
     <div class="actions"><button type="submit">Sunumu yükle</button></div>
-    <p class="message" id="presMsg"></p>
+    <p class="message" id="presMsg" role="status" aria-live="polite"></p>
   </form>
 
   <label>Sunum ara<input id="presSearch" type="search" placeholder="Sunum başlığı ara..."></label>
@@ -171,8 +175,8 @@
   <p class="lead">CV'ye eklenecek yayınları işaretleyin; tarayıcıdan PDF olarak kaydedebilir veya yazdırabilirsiniz.</p>
   <div id="cvChoices"></div>
   <div class="actions">
-    <button id="printCv">CV / yayın listesini yazdır</button>
-    <button id="exportJson" class="secondary">Verileri JSON yedekle</button>
+    <button type="button" id="printCv">CV / yayın listesini yazdır</button>
+    <button type="button" id="exportJson" class="secondary">Verileri JSON yedekle</button>
   </div>
 </section>
 
@@ -181,23 +185,23 @@
   <h1>Akademik profil</h1>
   <form id="profileForm">
     <div class="columns">
-      <label>Ad soyad<input id="fullName" placeholder="Prof. Dr. ..."></label>
-      <label>Kurum<input id="institution"></label>
+      <label>Ad soyad<input id="fullName" placeholder="Prof. Dr. ..." autocomplete="name"></label>
+      <label>Kurum<input id="institution" autocomplete="organization"></label>
     </div>
     <div class="columns">
       <label>Uzmanlık / görev<input id="specialty"></label>
-      <label>ORCID<input id="orcid" placeholder="0000-0000-0000-0000"></label>
+      <label>ORCID<input id="orcid" placeholder="0000-0000-0000-0000" spellcheck="false"></label>
     </div>
-    <label>E-posta<input id="contactEmail" type="email"></label>
+    <label>E-posta<input id="contactEmail" type="email" autocomplete="email"></label>
     <label>Özgeçmiş özeti<textarea id="bio" rows="5"></textarea></label>
-    <div class="actions"><button>Profili kaydet</button></div>
-    <p id="profileMsg" class="message"></p>
+    <div class="actions"><button type="submit">Profili kaydet</button></div>
+    <p id="profileMsg" class="message" role="status" aria-live="polite"></p>
   </form>
 </section>
 
 </div>
 
-<p id="globalMsg" class="message"></p>
+<p id="globalMsg" class="message" role="alert"></p>
 </main>
 
 <footer class="site-footer">Akademik Yayın Yönetimi · Özel arşiv</footer>
