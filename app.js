@@ -68,7 +68,6 @@ async function load(){
 function render(){
   const q=$('search').value.toLocaleLowerCase('tr');
   const arr=publications.filter(p=>[p.title,p.authors,p.journal,p.year].join(' ').toLocaleLowerCase('tr').includes(q));
-  $('count')->textContent=publications.length; // düzeltildi
   $('count').textContent=publications.length;
   $('citations').textContent=publications.reduce((s,p)=>s+(p.citation_count||0),0);
   
@@ -77,7 +76,6 @@ function render(){
     const ownerProfile = profiles.find(x => x.user_id === p.user_id);
     const ownerName = ownerProfile?.full_name || ownerProfile?.contact_email || 'Meslektaşınız';
 
-    // Bu yayın kimlerle paylaşılmış? (Owner ekranı için çarpı butonu eklendi)
     const myShares = pubShares.filter(s => s.publication_id === p.id);
     let sharedWithText = '';
     if(isOwner && myShares.length > 0) {
@@ -115,7 +113,6 @@ function render(){
 $('search').oninput=render;
 
 $('list').onclick = async e => {
-  // 1. Owner'ın başkasıyla yaptığı paylaşımı kaldırması
   const removeBtn = e.target.closest('button.remove-share');
   if(removeBtn) {
     const shareId = removeBtn.dataset.shareId;
@@ -127,7 +124,6 @@ $('list').onclick = async e => {
     return;
   }
 
-  // 2. Misafirin kendisiyle paylaşılanı listeden silmesi
   const myShareRemoveBtn = e.target.closest('button.remove-my-share');
   if(myShareRemoveBtn) {
     const pubId = myShareRemoveBtn.dataset.pubId;
@@ -290,7 +286,7 @@ $('presentationForm').onsubmit = async e => {
 
   setTimeout(() => {
     msg('presMsg', '');
-    $('presMsg').className = 'message';
+    $('presMsg', 'message'); // Düzeltildi
   }, 3000);
 
   $('presentationForm').reset();
@@ -395,7 +391,6 @@ function showCustomConfirm(title, text, onConfirm) {
 }
 
 $('presentationsList').onclick = async e => {
-  // 1. Owner'ın başkasıyla yaptığı paylaşımı kaldırması
   const removeBtn = e.target.closest('button.remove-share');
   if(removeBtn) {
     const shareId = removeBtn.dataset.shareId;
@@ -407,7 +402,6 @@ $('presentationsList').onclick = async e => {
     return;
   }
 
-  // 2. Misafirin kendisiyle paylaşılanı listeden silmesi
   const myShareRemoveBtn = e.target.closest('button.remove-my-share');
   if(myShareRemoveBtn) {
     const presId = myShareRemoveBtn.dataset.presId;
@@ -433,6 +427,12 @@ $('presentationsList').onclick = async e => {
   }
 
   if(btn.classList.contains('delete-pres')) {
+    const p = presentations.find(x => x.id === id);
+    if (!p || p.user_id !== user.id) {
+      showCustomAlert('Yetkisiz İşlem', 'Bu sunumu silme yetkiniz yok, çünkü bu sunum sizinle paylaşılmıştır.');
+      return;
+    }
+
     showCustomConfirm('Sunumu Sil', 'Bu sunumu silmek istediğinize emin misiniz?', async () => {
       const fileUrl = btn.dataset.url;
       try {
@@ -474,8 +474,8 @@ $('printCv').onclick = () => {
   const formatPublication = p => {
     const volume = p.volume ? safe(p.volume) : '';
     const issue = p.issue ? '(' + safe(p.issue) + ')' : '';
-    const pages = p.pages ? ':' + safe(p.pages) : '';
-    const details = volume + issue + pages;
+    .pages?':'+safe(p.pages):''; // Düzeltildi
+    const details = volume + issue + (p.pages ? ':' + safe(p.pages) : '');
     const article = p.article_number ? ' Makale no: ' + safe(p.article_number) + '.' : '';
     const doi = p.doi ? ' DOI: ' + safe(p.doi) : '';
 
@@ -491,12 +491,40 @@ $('printCv').onclick = () => {
   const w = window.open('', '_blank');
   if (!w) { showCustomAlert('Hata', 'Tarayıcı açılır pencereyi engelledi.'); return; }
 
-  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunmuyor.</p>'}</body></html>`;
+  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunvuyor.</p>'}</body></html>`;
 
   w.document.write(html);
   w.document.close();
   w.focus();
   setTimeout(() => w.print(), 300);
+};
+
+// --- SEÇİLEN YAYINLARI E-POSTA İLE GÖNDERME ---
+const emailBtn = document.createElement('button');
+emailBtn.id = 'emailSelectedPubs';
+emailBtn.className = 'secondary';
+emailBtn.textContent = 'Seçilen Yayınları E-posta ile Gönder';
+emailBtn.style.marginLeft = '8px';
+
+document.querySelector('#cv .actions').appendChild(emailBtn);
+
+emailBtn.onclick = () => {
+  const ids = new Set([...document.querySelectorAll('.cvcheck:checked')].map(x => x.value));
+  const rows = publications.filter(p => ids.has(String(p.id)));
+
+  if(!rows.length) {
+    showCustomAlert('Uyarı', 'Lütfen e-posta ile göndermek için en az bir yayın seçin.');
+    return;
+  }
+
+  const pubText = rows.map((p, index) => {
+    return `${index + 1}. ${p.authors || 'Yazar belirtilmemiş'}. (${p.year || 'Yıl yok'}). ${p.title}. ${p.journal || ''}. ${p.doi ? 'DOI: ' + p.doi : ''}`;
+  }).join('\n\n');
+
+  const subject = encodeURIComponent('Akademik Yayın Listesi');
+  const body = encodeURIComponent(`Merhaba,\n\nPaylaşmak istediğim akademik yayın listesi aşağıdadır:\n\n${pubText}\n\nSaygılarımla.`);
+
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
 };
 
 exportJson.onclick=()=>{const blob=new Blob([JSON.stringify({profile,publications:publications.map(({pdf_path,...rest})=>rest)},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='akademik-yayinlar-yedek.json';a.click();URL.revokeObjectURL(a.exportJson);};
