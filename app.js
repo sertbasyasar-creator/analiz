@@ -82,9 +82,9 @@ function render(){
       sharedWithText = myShares.map(s => {
         const uProf = profiles.find(x => x.user_id === s.shared_with_user_id);
         const uName = uProf?.full_name || uProf?.contact_email || 'Biri';
-        return `<span class="muted" style="font-size:12px; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px; display:inline-flex; align-items:center; gap:6px;">
+        return `<span class="muted" style="font-size:12px; background:#fef3c7; color:#92400e; padding:4px 10px; border-radius:6px; font-weight:500; margin-left:6px; display:inline-flex; align-items:center; gap:8px;">
           Paylaşıldı: ${safe(uName)}
-          <button class="remove-share" data-share-id="${s.id}" style="background:none; border:none; color:#92400e; cursor:pointer; font-weight:bold; padding:0; font-size:14px;" title="Paylaşımı Kaldır">×</button>
+          <a href="#" class="remove-share" data-share-id="${s.id}" style="color:#b45309; text-decoration:underline; font-size:11.5px; font-weight:600;" title="Paylaşımı Durdur">Paylaşımı Durdur</a>
         </span>`;
       }).join('');
     }
@@ -103,7 +103,7 @@ function render(){
           ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>${sharedWithText}` : `
   <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Yayın</span>
   <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
-  <button class="remove-my-share" data-pub-id="${p.id}" style="background:none; border:none; color:#dc2626; cursor:pointer; font-weight:bold; font-size:14px; margin-left:6px;" title="Bu paylaşımı kaldır">×</button>
+  <a href="#" class="remove-my-share" data-pub-id="${p.id}" style="font-size:12px; color:#dc2626; text-decoration:underline; font-weight:600; margin-left:6px;" title="Paylaşımı Kaldır">Paylaşımı Kaldır</a>
 `}
         </div>
       </article>
@@ -113,10 +113,11 @@ function render(){
 $('search').oninput=render;
 
 $('list').onclick = async e => {
-  const removeBtn = e.target.closest('button.remove-share');
+  const removeBtn = e.target.closest('a.remove-share');
   if(removeBtn) {
+    e.preventDefault();
     const shareId = removeBtn.dataset.shareId;
-    showCustomConfirm('Paylaşımı Kaldır', 'Bu içeriğin diğer kullanıcıyla olan paylaşımını durdurmak istiyor musunuz?', async () => {
+    showCustomConfirm('Paylaşımı Durdur', 'Bu içeriğin diğer kullanıcıyla olan paylaşımını durdurmak istiyor musunuz?', async () => {
       const { error } = await db.from('publication_shares').delete().eq('id', shareId);
       if(error) showCustomAlert('Hata', error.message);
       else await load();
@@ -124,10 +125,11 @@ $('list').onclick = async e => {
     return;
   }
 
-  const myShareRemoveBtn = e.target.closest('button.remove-my-share');
+  const myShareRemoveBtn = e.target.closest('a.remove-my-share');
   if(myShareRemoveBtn) {
+    e.preventDefault();
     const pubId = myShareRemoveBtn.dataset.pubId;
-    showCustomConfirm('Paylaşımı Kaldır', 'Bu ortak yayını listenizden kaldırmak istiyor musunuz?', async () => {
+    showCustomConfirm('Paylaşımı Durdur', 'Bu ortak yayını listenizden kaldırmak istiyor musunuz?', async () => {
       const { error } = await db.from('publication_shares')
         .delete()
         .eq('publication_id', pubId)
@@ -230,7 +232,7 @@ function renderPresentations(){
         const uName = uProf?.full_name || uProf?.contact_email || 'Biri';
         return `<span class="muted" style="font-size:12px; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px; display:inline-flex; align-items:center; gap:6px;">
           Paylaşıldı: ${safe(uName)}
-          <button class="remove-share" data-share-id="${s.id}" style="background:none; border:none; color:#92400e; cursor:pointer; font-weight:bold; padding:0; font-size:14px;" title="Paylaşımı Kaldır">×</button>
+          <a href="#" class="remove-share" data-share-id="${s.id}" style="color:#b45309; text-decoration:underline; font-size:11.5px; font-weight:600;" title="Paylaşımı Kaldır">Paylaşımı Durdur</a>
         </span>`;
       }).join('');
     }
@@ -244,7 +246,7 @@ function renderPresentations(){
           ${isOwner ? `<button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>${sharedWithText}` : `
   <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Sunum</span>
   <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
-  <button class="remove-my-share" data-pres-id="${p.id}" style="background:none; border:none; color:#dc2626; cursor:pointer; font-weight:bold; font-size:14px; margin-left:6px;" title="Bu paylaşımı kaldır">×</button>
+  <a href="#" class="remove-my-share" data-pres-id="${p.id}" style="font-size:12px; color:#dc2626; text-decoration:underline; font-weight:600; margin-left:6px;" title="Paylaşımı Kaldır">Paylaşımı Durdur</a>
 `}
         </div>
       </article>
@@ -391,10 +393,11 @@ function showCustomConfirm(title, text, onConfirm) {
 }
 
 $('presentationsList').onclick = async e => {
-  const removeBtn = e.target.closest('button.remove-share');
+  const removeBtn = e.target.closest('a.remove-share');
   if(removeBtn) {
+    e.preventDefault();
     const shareId = removeBtn.dataset.shareId;
-    showCustomConfirm('Paylaşımı Kaldır', 'Bu içeriğin diğer kullanıcıyla olan paylaşımını durdurmak istiyor musunuz?', async () => {
+    showCustomConfirm('Paylaşımı Kaldır', 'Bu sunumun diğer kullanıcıyla olan paylaşımını durdurmak istiyor musunuz?', async () => {
       const { error } = await db.from('presentation_shares').delete().eq('id', shareId);
       if(error) showCustomAlert('Hata', error.message);
       else await loadPresentations();
@@ -402,8 +405,9 @@ $('presentationsList').onclick = async e => {
     return;
   }
 
-  const myShareRemoveBtn = e.target.closest('button.remove-my-share');
+  const myShareRemoveBtn = e.target.closest('a.remove-my-share');
   if(myShareRemoveBtn) {
+    e.preventDefault();
     const presId = myShareRemoveBtn.dataset.presId;
     showCustomConfirm('Paylaşımı Kaldır', 'Bu ortak sunumu listenizden kaldırmak istiyor musunuz?', async () => {
       const { error } = await db.from('presentation_shares')
@@ -490,7 +494,7 @@ $('printCv').onclick = () => {
   const w = window.open('', '_blank');
   if (!w) { showCustomAlert('Hata', 'Tarayıcı açılır pencereyi engelledi.'); return; }
 
-  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Total ${rows.length}</h2>${sections || '<p>Seçili yayın bulunvuyor.</p>'}</body></html>`;
+  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunmuyor.</p>'}</body></html>`;
 
   w.document.write(html);
   w.document.close();
@@ -512,7 +516,7 @@ emailBtn.onclick = () => {
   const rows = publications.filter(p => ids.has(String(p.id)));
 
   if(!rows.length) {
-    showCustomAlert('Uyarı', 'Lütfen e-posta ile göndermek için en az bir yayın seçin.');
+    showCustomAlert('Uyarı', 'Lütfen e-posta ile göndermek için en az bir yayın seçin. ');
     return;
   }
 
