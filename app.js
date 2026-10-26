@@ -101,6 +101,7 @@ function render(){
           ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>${sharedWithText}` : `
   <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Yayın</span>
   <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
+  <button class="remove-my-share" data-pub-id="${p.id}" data-type="publication" style="background:none; border:none; color:#dc2626; cursor:pointer; font-weight:bold; font-size:14px; margin-left:6px;" title="Bu paylaşımı kaldır">×</button>
 `}
         </div>
       </article>
@@ -110,6 +111,20 @@ function render(){
 $('search').oninput=render;
 
 $('list').onclick = async e => {
+  const myShareRemoveBtn = e.target.closest('button.remove-my-share');
+  if(myShareRemoveBtn) {
+    const pubId = myShareRemoveBtn.dataset.pubId;
+    showCustomConfirm('Paylaşımı Kaldır', 'Bu ortak yayını listenizden kaldırmak istiyor musunuz?', async () => {
+      const { error } = await db.from('publication_shares')
+        .delete()
+        .eq('publication_id', pubId)
+        .eq('shared_with_user_id', user.id);
+        
+      if(error) showCustomAlert('Hata', error.message);
+      else await load();
+    });
+    return;
+  }
   const b=e.target.closest('button[data-action]');
   if(!b)return;
   const p=publications.find(x=>x.id===b.dataset.id);
@@ -212,6 +227,7 @@ function renderPresentations(){
           ${isOwner ? `<button class="secondary delete-pres" data-id="${p.id}" data-url="${safe(p.file_url)}">Sil</button>${sharedWithText}` : `
   <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Sunum</span>
   <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
+  <button class="remove-my-share" data-pres-id="${p.id}" data-type="presentation" style="background:none; border:none; color:#dc2626; cursor:pointer; font-weight:bold; font-size:14px; margin-left:6px;" title="Bu paylaşımı kaldır">×</button>
 `}
         </div>
       </article>
@@ -358,6 +374,20 @@ function showCustomConfirm(title, text, onConfirm) {
 }
 
 $('presentationsList').onclick = async e => {
+  const myShareRemoveBtn = e.target.closest('button.remove-my-share');
+  if(myShareRemoveBtn) {
+    const presId = myShareRemoveBtn.dataset.presId;
+    showCustomConfirm('Paylaşımı Kaldır', 'Bu ortak sunumu listenizden kaldırmak istiyor musunuz?', async () => {
+      const { error } = await db.from('presentation_shares')
+        .delete()
+        .eq('presentation_id', presId)
+        .eq('shared_with_user_id', user.id);
+        
+      if(error) showCustomAlert('Hata', error.message);
+      else await loadPresentations();
+    });
+    return;
+  }
   const btn = e.target.closest('button[data-action="share"], button.delete-pres');
   if(!btn) return;
 
