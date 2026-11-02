@@ -333,22 +333,6 @@ $('profileForm').onsubmit = async e => {
 function renderCv() {
   const pubChoices = publications.map(p =>
     `<div class="cvline"><label><input type="checkbox" class="cvcheck pubcheck" value="${p.id}" checked>${safe(p.title)} (${safe(p.year)})</label></div>`
-  ).join('');
-
-  const certChoices = certificates.map(c =>
-    `<div class="cvline"><label><input type="checkbox" class="cvcheck certcheck" value="${c.id}" checked>${safe(c.title)} (Belge)</label></div>`
-  ).join('');
-
-  $('cvChoices.innerHTML') = `
-    <h3>Yayınlar</h3>${pubChoices || '<p>Önce yayın ekleyin.</p>'}
-    <h3 style="margin-top:20px;">Belgeler ve Sertifikalar</h3>${certChoices || '<p>Önce belge ekleyin.</p>'}
-  `;
-}
-
-// Düzeltme: renderCv içindeki atama hatasını düzeltelim
-function renderCv() {
-  const pubChoices = publications.map(p =>
-    `<div class="cvline"><label><input type="checkbox" class="cvcheck pubcheck" value="${p.id}" checked>${safe(p.title)} (${safe(p.year)})</label></div>`
   ).join('') || '<p>Önce yayın ekleyin.</p>';
 
   const certChoices = certificates.map(c =>
