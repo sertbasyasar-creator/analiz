@@ -33,23 +33,35 @@ document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => tab(b.dat
 async function start() {
   if (!configured) { show('setup'); return; }
   db = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  
+  // Önce oturumu kontrol edelim
   const { data: { session } } = await db.auth.getSession();
   await sessionChanged(session);
-  db.auth.onAuthStateChange((_event, s) => { setTimeout(() => sessionChanged(s), 0); });
+
+  // Oturum değişikliklerini dinleyelim
+  db.auth.onAuthStateChange(async (_event, s) => {
+    // Burada setTimeout yerine doğrudan await kullanarak güvenli hale getirelim
+    await sessionChanged(s);
+  });
 }
 
 async function sessionChanged(session) {
   user = session?.user || null;
-  if (!user) { hide('app'); hide('logout'); show('loginPanel'); return; }
-  hide('loginPanel'); show('app'); show('logout'); await load();
+  if (!user) { 
+    hide('app'); 
+    hide('logout'); 
+    show('loginPanel'); 
+    return; 
+  }
+  
+  hide('loginPanel'); 
+  show('app'); 
+  show('logout'); 
+  
+  // Sayfa açılır açılmaz verileri garanti şekilde yükleyelim ve ilk sekme olan Yayınlarım'ı seçili yapalım
+  await load();
+  tab('publications'); 
 }
-
-$('loginForm').onsubmit = async e => {
-  e.preventDefault();
-  msg('loginMsg', 'Giriş yapılıyor...');
-  const { error } = await db.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
-  msg('loginMsg', error ? error.message : '');
-};
 
 $('logout').onclick = () => db.auth.signOut();
 
