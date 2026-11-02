@@ -41,7 +41,9 @@ async function start() {
 async function sessionChanged(session) {
   user = session?.user || null;
   if (!user) { hide('app'); hide('logout'); show('loginPanel'); return; }
-  hide('loginPanel'); show('app'); show('logout'); await load();
+  hide('loginPanel'); show('app'); show('logout'); 
+  await load();
+  render(); // İşte burası! Giriş yapıldığı an ekranı çizer.
 }
 
 $('loginForm').onsubmit = async e => {
