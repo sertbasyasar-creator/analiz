@@ -43,7 +43,7 @@ async function sessionChanged(session) {
   if (!user) { hide('app'); hide('logout'); show('loginPanel'); return; }
   hide('loginPanel'); show('app'); show('logout'); 
   await load();
-  render(); // İşte burası! Giriş yapıldığı an ekranı çizer.
+  tab('publications');
 }
 
 $('loginForm').onsubmit = async e => {
@@ -57,27 +57,30 @@ $('logout').onclick = () => db.auth.signOut();
 
 /* ---------- VERİ YÜKLEME ---------- */
 async function load() {
-  const profRes = await db.from('profiles').select('*');
-  profiles = profRes.data || [];
-  profile = profiles.find(x => x.user_id === user.id) || {};
+  try {
+    const profRes = await db.from('profiles').select('*');
+    profiles = profRes.data || [];
+    profile = profiles.find(x => x.user_id === user.id) || {};
 
-  for (const [k, v] of Object.entries({
-    fullName: profile.full_name, institution: profile.institution, specialty: profile.specialty,
-    orcid: profile.orcid, contactEmail: profile.contact_email, bio: profile.bio
-  })) $(k).value = v || '';
+    for (const [k, v] of Object.entries({
+      fullName: profile.full_name, institution: profile.institution, specialty: profile.specialty,
+      orcid: profile.orcid, contactEmail: profile.contact_email, bio: profile.bio
+    })) {
+      if ($(k)) $(k).value = v || '';
+    }
 
-  const pubRes = await db.from('publications').select('*').order('year', { ascending: false });
-  const shareRes = await db.from('publication_shares').select('*');
-  pubShares = shareRes.data || [];
+    const pubRes = await db.from('publications').select('*').order('year', { ascending: false });
+    const shareRes = await db.from('publication_shares').select('*');
+    pubShares = shareRes.data || [];
 
-  const sharedPubIds = new Set(pubShares.filter(s => s.shared_with_user_id === user.id).map(s => s.publication_id));
-  const allPubs = pubRes.data || [];
+    const sharedPubIds = new Set(pubShares.filter(s => s.shared_with_user_id === user.id).map(s => s.publication_id));
+    const allPubs = pubRes.data || [];
 
-  publications = allPubs.filter(p => p.user_id === user.id || sharedPubIds.has(p.id));
-  
-  // Veriler yüklendikten sonra ekranı ve CV'yi hemen güncelleyelim
-  render();
-  if (typeof renderCv === 'function') renderCv();
+    publications = allPubs.filter(p => p.user_id === user.id || sharedPubIds.has(p.id));
+    render();
+  } catch (err) {
+    console.error("Yükleme hatası:", err);
+  }
 }
 
 /* ---------- PAYLAŞIM YARDIMCILARI ---------- */
@@ -108,15 +111,10 @@ function render() {
   let arr = publications.filter(p => [p.title, p.authors, p.journal, p.year].join(' ').toLocaleLowerCase('tr').includes(q));
 
   arr.sort((a, b) => {
-    if (sortBy === 'yearDesc') {
-      return (b.year || 0) - (a.year || 0);
-    } else if (sortBy === 'yearAsc') {
-      return (a.year || 0) - (b.year || 0);
-    } else if (sortBy === 'titleAsc') {
-      return (a.title || '').localeCompare(b.title || '', 'tr');
-    } else if (sortBy === 'addedDesc') {
-      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-    }
+    if (sortBy === 'yearDesc') return (b.year || 0) - (a.year || 0);
+    if (sortBy === 'yearAsc') return (a.year || 0) - (b.year || 0);
+    if (sortBy === 'titleAsc') return (a.title || '').localeCompare(b.title || '', 'tr');
+    if (sortBy === 'addedDesc') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     return 0;
   });
 
@@ -734,7 +732,7 @@ async function openShareModal(itemId, itemType) {
 
     backdrop.remove();
     if (error) {
-      showCustomAlert('Paylaşım Hatası', 'Zaten paylaşılmış olabilir: ' + error.error_description || error.message);
+      showCustomAlert('Paylaşım Hatası', 'Zaten paylaşılmış olabilir: ' + error.message);
     } else {
       showCustomAlert('Başarılı', 'İçerik başarıyla paylaşıldı!');
       if (itemType === 'publication') await load();
@@ -873,7 +871,7 @@ emailBtn.onclick = () => {
 /* ---------- JSON YEDEK ---------- */
 $('exportJson').onclick = () => {
   const blob = new Blob(
-    [JSON.stringify({ profile, publications: publications.map(({ pdf_path, ...rest }) =>rest) }, null, 2)],
+    [JSON.stringify({ profile, publications: publications.map(({ pdf_path, ...rest }) => rest) }, null, 2)],
     { type: 'application/json' }
   );
   const href = URL.createObjectURL(blob);
