@@ -74,7 +74,10 @@ async function load() {
   const allPubs = pubRes.data || [];
 
   publications = allPubs.filter(p => p.user_id === user.id || sharedPubIds.has(p.id));
+  
+  // Veriler yüklendikten sonra ekranı ve CV'yi hemen güncelleyelim
   render();
+  if (typeof renderCv === 'function') renderCv();
 }
 
 /* ---------- PAYLAŞIM YARDIMCILARI ---------- */
