@@ -95,19 +95,47 @@ function shareRowHtml({ isOwner, ownerId, shares, itemId, label }) {
     <button type="button" class="chip-action chip-danger remove-my-share" data-item-id="${itemId}">Listemden kaldır</button>`;
 }
 
-/* ---------- YAYINLAR ---------- */
+/* ---------- YAYINLAR (SIRALAMA DAHİL) ---------- */
 function render() {
   const q = $('search').value.toLocaleLowerCase('tr');
-  const arr = publications.filter(p => [p.title, p.authors, p.journal, p.year].join(' ').toLocaleLowerCase('tr').includes(q));
+  const sortBy = $('sortBy')?.value || 'yearDesc';
+
+  let arr = publications.filter(p => [p.title, p.authors, p.journal, p.year].join(' ').toLocaleLowerCase('tr').includes(q));
+
+  arr.sort((a, b) => {
+    if (sortBy === 'yearDesc') {
+      return (b.year || 0) - (a.year || 0);
+    } else if (sortBy === 'yearAsc') {
+      return (a.year || 0) - (b.year || 0);
+    } else if (sortBy === 'titleAsc') {
+      return (a.title || '').localeCompare(b.title || '', 'tr');
+    } else if (sortBy === 'addedDesc') {
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    }
+    return 0;
+  });
+
   $('count').textContent = publications.length;
   $('citations').textContent = publications.reduce((s, p) => s + (p.citation_count || 0), 0);
 
   $('list').innerHTML = arr.length ? arr.map(p => {
     const isOwner = p.user_id === user.id;
-    const shareRow = shareRowHtml({
-      isOwner, ownerId: p.user_id, itemId: p.id, label: 'Ortak Yayın',
-      shares: pubShares.filter(s => s.publication_id === p.id)
-    });
+    const ownerProfile = profiles.find(x => x.user_id === p.user_id);
+    const ownerName = ownerProfile?.full_name || ownerProfile?.contact_email || 'Meslektaşınız';
+
+    const myShares = pubShares.filter(s => s.publication_id === p.id);
+    let sharedWithText = '';
+    if (isOwner && myShares.length > 0) {
+      sharedWithText = myShares.map(s => {
+        const uProf = profiles.find(x => x.user_id === s.shared_with_user_id);
+        const uName = uProf?.full_name || uProf?.contact_email || 'Biri';
+        return `<span class="muted" style="font-size:12px; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px; display:inline-flex; align-items:center; gap:6px;">
+          Paylaşıldı: ${safe(uName)}
+          <a href="#" class="remove-share" data-share-id="${s.id}" style="color:#b45309; text-decoration:underline; font-size:11.5px; font-weight:600;" title="Paylaşımı Kaldır">Paylaşımı Durdur</a>
+        </span>`;
+      }).join('');
+    }
+
     const meta = [p.authors, p.journal, p.year].filter(Boolean).map(safe).join(' · ');
     const details = (p.volume ? '; ' + safe(p.volume) : '') + (p.issue ? '(' + safe(p.issue) + ')' : '') +
       (p.pages ? ':' + safe(p.pages) : '') + (p.article_number ? ' · Makale no: ' + safe(p.article_number) : '');
@@ -122,19 +150,21 @@ function render() {
           ${p.doi ? link(doiUrl(p.doi), 'DOI') : ''}
           ${link(pubmedUrl(p), 'PubMed')}
           ${link(url(p.journal_url), 'Dergi sayfası')}
-          ${isOwner ? `
-            <button class="secondary" data-action="share" data-id="${p.id}" data-type="publication">Paylaş</button>
-            <button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button>
-            <button class="danger" data-action="delete" data-id="${p.id}">Sil</button>` : ''}
+          <button class="secondary" data-action="share" data-id="${p.id}" data-type="publication">Paylaş</button>
+          ${isOwner ? `<button class="secondary" data-action="edit" data-id="${p.id}">Düzenle</button><button class="danger" data-action="delete" data-id="${p.id}">Sil</button>${sharedWithText}` : `
+  <span class="muted" style="font-size:12px; background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-weight:500;">Ortak Yayın</span>
+  <span class="muted" style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-weight:500; margin-left:4px;">Paylaşan: ${safe(ownerName)}</span>
+  <a href="#" class="remove-my-share" data-pub-id="${p.id}" style="font-size:12px; color:#dc2626; text-decoration:underline; font-weight:600; margin-left:6px;" title="Paylaşımı Kaldır">Paylaşımı Durdur</a>
+`}
         </div>
-        ${shareRow ? `<div class="share-row">${shareRow}</div>` : ''}
       </article>`;
   }).join('') : '<p>Henüz kayıtlı yayın bulunmuyor.</p>';
 }
 $('search').oninput = render;
+if ($('sortBy')) { $('sortBy').onchange = render; }
 
 $('list').onclick = async e => {
-  const removeBtn = e.target.closest('.remove-share');
+  const removeBtn = e.target.closest('a.remove-share');
   if (removeBtn) {
     e.preventDefault();
     const shareId = removeBtn.dataset.shareId;
@@ -146,10 +176,10 @@ $('list').onclick = async e => {
     return;
   }
 
-  const myShareRemoveBtn = e.target.closest('.remove-my-share');
+  const myShareRemoveBtn = e.target.closest('a.remove-my-share');
   if (myShareRemoveBtn) {
     e.preventDefault();
-    const pubId = myShareRemoveBtn.dataset.itemId;
+    const pubId = myShareRemoveBtn.dataset.pubId;
     showCustomConfirm('Paylaşımı Kaldır', 'Bu ortak yayını listenizden kaldırmak istiyor musunuz?', async () => {
       const { error } = await db.from('publication_shares')
         .delete()
@@ -699,7 +729,7 @@ async function openShareModal(itemId, itemType) {
 
     backdrop.remove();
     if (error) {
-      showCustomAlert('Paylaşım Hatası', 'Zaten paylaşılmış olabilir: ' + error.message);
+      showCustomAlert('Paylaşım Hatası', 'Zaten paylaşılmış olabilir: ' + error.error_description || error.message);
     } else {
       showCustomAlert('Başarılı', 'İçerik başarıyla paylaşıldı!');
       if (itemType === 'publication') await load();
@@ -838,7 +868,7 @@ emailBtn.onclick = () => {
 /* ---------- JSON YEDEK ---------- */
 $('exportJson').onclick = () => {
   const blob = new Blob(
-    [JSON.stringify({ profile, publications: publications.map(({ pdf_path, ...rest }) => rest) }, null, 2)],
+    [JSON.stringify({ profile, publications: publications.map(({ pdf_path, ...rest }) =>rest) }, null, 2)],
     { type: 'application/json' }
   );
   const href = URL.createObjectURL(blob);
