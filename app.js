@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const $ = id => document.getElementById(id);
 const cfg = window.APP_CONFIG || {};
 const configured = cfg.supabaseUrl?.startsWith('https://') && cfg.supabaseAnonKey && !cfg.supabaseAnonKey.startsWith('SUPABASE_');
-let db, user, publications = [], presentations = [], profiles = [], pubShares = [], presShares = [], profile = {};
+let db, user, publications = [], presentations = [], certificates = [], profiles = [], pubShares = [], presShares = [], certShares = [], profile = {};
 const show = id => $(id).classList.remove('hidden'), hide = id => $(id).classList.add('hidden');
 const msg = (id, s) => $(id).textContent = s;
 const safe = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -20,6 +20,10 @@ function tab(id) {
   if (id === 'presentationsTab') {
     presentations = [];
     loadPresentations();
+  }
+  if (id === 'certificatesTab') {
+    certificates = [];
+    loadCertificates();
   }
 }
 
@@ -327,9 +331,34 @@ $('profileForm').onsubmit = async e => {
 
 /* ---------- CV ---------- */
 function renderCv() {
-  $('cvChoices').innerHTML = publications.map(p =>
-    `<div class="cvline"><label><input type="checkbox" class="cvcheck" value="${p.id}" checked>${safe(p.title)} (${safe(p.year)})</label></div>`
+  const pubChoices = publications.map(p =>
+    `<div class="cvline"><label><input type="checkbox" class="cvcheck pubcheck" value="${p.id}" checked>${safe(p.title)} (${safe(p.year)})</label></div>`
+  ).join('');
+
+  const certChoices = certificates.map(c =>
+    `<div class="cvline"><label><input type="checkbox" class="cvcheck certcheck" value="${c.id}" checked>${safe(c.title)} (Belge)</label></div>`
+  ).join('');
+
+  $('cvChoices.innerHTML') = `
+    <h3>Yayınlar</h3>${pubChoices || '<p>Önce yayın ekleyin.</p>'}
+    <h3 style="margin-top:20px;">Belgeler ve Sertifikalar</h3>${certChoices || '<p>Önce belge ekleyin.</p>'}
+  `;
+}
+
+// Düzeltme: renderCv içindeki atama hatasını düzeltelim
+function renderCv() {
+  const pubChoices = publications.map(p =>
+    `<div class="cvline"><label><input type="checkbox" class="cvcheck pubcheck" value="${p.id}" checked>${safe(p.title)} (${safe(p.year)})</label></div>`
   ).join('') || '<p>Önce yayın ekleyin.</p>';
+
+  const certChoices = certificates.map(c =>
+    `<div class="cvline"><label><input type="checkbox" class="cvcheck certcheck" value="${c.id}" checked>${safe(c.title)} (Belge)</label></div>`
+  ).join('');
+
+  $('cvChoices').innerHTML = `
+    <h3 style="font-size:16px; margin-bottom:10px;">Yayınlar</h3>${pubChoices}
+    <h3 style="font-size:16px; margin:20px 0 10px;">Belgeler ve Sertifikalar</h3>${certChoices}
+  `;
 }
 
 /* ---------- SUNUMLAR ---------- */
@@ -485,6 +514,158 @@ if ($('presSearch')) {
   $('presSearch').oninput = renderPresentations;
 }
 
+/* ---------- BELGELER VE SERTİFİKALAR YÖNETİMİ ---------- */
+async function loadCertificates() {
+  const certRes = await db.from('certificates').select('*').order('created_at', { ascending: false });
+  const shareRes = await db.from('certificate_shares').select('*');
+  certShares = shareRes.data || [];
+
+  const sharedCertIds = new Set(certShares.filter(s => s.shared_with_user_id === user.id).map(s => s.certificate_id));
+  const allCerts = certRes.data || [];
+
+  certificates = allCerts.filter(c => c.user_id === user.id || sharedCertIds.has(c.id));
+  renderCertificates();
+}
+
+function renderCertificates() {
+  const listEl = $('certificatesList');
+  const q = $('certSearch')?.value.toLocaleLowerCase('tr') || '';
+  const filtered = certificates.filter(c => c.title.toLocaleLowerCase('tr').includes(q));
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<p>Eşleşen belge bulunmuyor.</p>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(c => {
+    const isOwner = c.user_id === user.id;
+    const shareRow = shareRowHtml({
+      isOwner, ownerId: c.user_id, itemId: c.id, label: 'Ortak Belge',
+      shares: certShares.filter(s => s.certificate_id === c.id)
+    });
+    return `
+      <article class="publication">
+        <h3>${safe(c.title)}</h3>
+        <div class="actions">
+          <a class="button" href="${safe(c.file_url)}" target="_blank" rel="noopener noreferrer">Belgeyi Aç / İndir</a>
+          ${isOwner ? `
+            <button class="secondary" data-action="share-cert" data-id="${c.id}">Paylaş</button>
+            <button class="danger delete-cert" data-id="${c.id}" data-url="${safe(c.file_url)}">Sil</button>` : ''}
+        </div>
+        ${shareRow ? `<div class="share-row">${shareRow}</div>` : ''}
+      </article>`;
+  }).join('');
+}
+
+$('certificateForm').onsubmit = async e => {
+  e.preventDefault();
+  msg('certMsg', 'Belge yükleniyor...');
+  $('certMsg').className = 'message';
+
+  const title = $('certTitle').value.trim();
+  const file = $('certFile').files[0];
+  if (!file) { msg('certMsg', 'Lütfen bir dosya seçin.'); return; }
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const filePath = `${user.id}/${Date.now()}_${safeName}`;
+
+  const { error: uploadError } = await db.storage.from('belgeler').upload(filePath, file);
+
+  if (uploadError) {
+    msg('certMsg', 'Yükleme hatası: ' + uploadError.message);
+    return;
+  }
+
+  const { data: publicURLData } = db.storage.from('belgeler').getPublicUrl(filePath);
+  const file_url = publicURLData.publicUrl;
+
+  const { error: dbError } = await db.from('certificates').insert([{ title, file_url, user_id: user.id }]);
+
+  if (dbError) {
+    msg('certMsg', 'Veritabanı kayıt hatası: ' + dbError.message);
+    return;
+  }
+
+  msg('certMsg', 'Belge başarıyla yüklendi!');
+  $('certMsg').className = 'message success';
+
+  setTimeout(() => {
+    msg('certMsg', '');
+    $('certMsg').className = 'message';
+  }, 3000);
+
+  $('certificateForm').reset();
+  await loadCertificates();
+};
+
+$('certificatesList').onclick = async e => {
+  const removeBtn = e.target.closest('.remove-share');
+  if (removeBtn) {
+    e.preventDefault();
+    const shareId = removeBtn.dataset.shareId;
+    showCustomConfirm('Paylaşımı Durdur', 'Bu belgenin diğer kullanıcıyla olan paylaşımını durdurmak istiyor musunuz?', async () => {
+      const { error } = await db.from('certificate_shares').delete().eq('id', shareId);
+      if (error) showCustomAlert('Hata', error.message);
+      else await loadCertificates();
+    }, 'Evet, Durdur');
+    return;
+  }
+
+  const myShareRemoveBtn = e.target.closest('.remove-my-share');
+  if (myShareRemoveBtn) {
+    e.preventDefault();
+    const certId = myShareRemoveBtn.dataset.itemId;
+    showCustomConfirm('Paylaşımı Kaldır', 'Bu ortak belgeyi listenizden kaldırmak istiyor musunuz?', async () => {
+      const { error } = await db.from('certificate_shares')
+        .delete()
+        .eq('certificate_id', certId)
+        .eq('shared_with_user_id', user.id);
+
+      if (error) showCustomAlert('Hata', error.message);
+      else await loadCertificates();
+    }, 'Evet, Kaldır');
+    return;
+  }
+
+  const shareBtn = e.target.closest('button[data-action="share-cert"]');
+  if (shareBtn) {
+    openShareModal(shareBtn.dataset.id, 'certificate');
+    return;
+  }
+
+  const delBtn = e.target.closest('button.delete-cert');
+  if (delBtn) {
+    const id = delBtn.dataset.id;
+    const c = certificates.find(x => x.id === id);
+    if (!c || c.user_id !== user.id) {
+      showCustomAlert('Yetkisiz İşlem', 'Bu belgeyi silme yetkiniz yok.');
+      return;
+    }
+
+    showCustomConfirm('Belgeyi Sil', 'Bu belgeyi silmek istediğinize emin misiniz?', async () => {
+      const fileUrl = delBtn.dataset.url;
+      try {
+        const urlObj = new URL(fileUrl);
+        const pathParts = urlObj.pathname.split('/belgeler/');
+        if (pathParts.length > 1) {
+          const storagePath = decodeURIComponent(pathParts[1]);
+          await db.storage.from('belgeler').remove([storagePath]);
+        }
+      } catch (err) {
+        console.warn('Storage dosya yolu çözülemedi:', err);
+      }
+
+      const { error } = await db.from('certificates').delete().eq('id', id);
+      if (error) showCustomAlert('Hata', error.message);
+      else await loadCertificates();
+    });
+  }
+};
+
+if ($('certSearch')) {
+  $('certSearch').oninput = renderCertificates;
+}
+
 /* ---------- PAYLAŞIM PENCERESİ ---------- */
 async function openShareModal(itemId, itemType) {
   const { data: allProfiles, error } = await db.from('profiles').select('*');
@@ -497,7 +678,7 @@ async function openShareModal(itemId, itemType) {
   const otherProfiles = (allProfiles || []).filter(p => p.user_id !== user.id);
 
   if (!otherProfiles.length) {
-    showCustomAlert('Uyarı', 'Paylaşım yapabileceğiniz başka kayıtlı profil bulunamadı. Önce diğer kullanıcının "Profilim" sekmesinden adını kaydetmesini sağlayın.');
+    showCustomAlert('Uyarı', 'Paylaşım yapabileceğiniz başka kayıtlı profil bulunamadı.');
     return;
   }
 
@@ -522,8 +703,10 @@ async function openShareModal(itemId, itemType) {
 
   backdrop.querySelector('#modalShareConfirm').onclick = async () => {
     const targetUserId = backdrop.querySelector('#shareUserSelect').value;
-    const tableName = itemType === 'publication' ? 'publication_shares' : 'presentation_shares';
-    const idColumn = itemType === 'publication' ? 'publication_id' : 'presentation_id';
+    let tableName = 'publication_shares';
+    let idColumn = 'publication_id';
+    if (itemType === 'presentation') { tableName = 'presentation_shares'; idColumn = 'presentation_id'; }
+    if (itemType === 'certificate') { tableName = 'certificate_shares'; idColumn = 'certificate_id'; }
 
     const { error } = await db.from(tableName).insert([{
       [idColumn]: itemId,
@@ -536,7 +719,8 @@ async function openShareModal(itemId, itemType) {
     } else {
       showCustomAlert('Başarılı', 'İçerik başarıyla paylaşıldı!');
       if (itemType === 'publication') await load();
-      else await loadPresentations();
+      else if (itemType === 'presentation') await loadPresentations();
+      else await loadCertificates();
     }
   };
 
@@ -586,8 +770,11 @@ function showCustomConfirm(title, text, onConfirm, yesLabel = 'Evet, Sil') {
 
 /* ---------- CV YAZDIR ---------- */
 $('printCv').onclick = () => {
-  const ids = new Set([...document.querySelectorAll('.cvcheck:checked')].map(x => x.value));
-  const rows = publications.filter(p => ids.has(String(p.id)));
+  const pubIds = new Set([...document.querySelectorAll('.cvcheck.pubcheck:checked')].map(x => x.value));
+  const certIds = new Set([...document.querySelectorAll('.cvcheck.certcheck:checked')].map(x => x.value));
+
+  const rows = publications.filter(p => pubIds.has(String(p.id)));
+  const certRows = certificates.filter(c => certIds.has(String(c.id)));
 
   const categories = [
     ['sci', 'SCI / SCI-Expanded'],
@@ -615,10 +802,20 @@ $('printCv').onclick = () => {
     return `<section><h2>${safe(label)} (${group.length})</h2><ol>${group.map(formatPublication).join('')}</ol></section>`;
   }).join('');
 
+  // Belgeler ve Sertifikalar Bölümü
+  const certSection = certRows.length ? `
+    <section>
+      <h2>Belgeler ve Sertifikalar (${certRows.length})</h2>
+      <ol>
+        ${certRows.map(c => `<li>${safe(c.title)}</li>`).join('')}
+      </ol>
+    </section>
+  ` : '';
+
   const w = window.open('', '_blank');
   if (!w) { showCustomAlert('Hata', 'Tarayıcı açılır pencereyi engelledi.'); return; }
 
-  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunmuyor.</p>'}</body></html>`;
+  const html = `<!doctype html><html lang="tr"><head><meta charset="UTF-8"><title>Akademik CV</title><style>body{font:12pt "Times New Roman",serif;margin:35px;line-height:1.5}h1{font-size:20pt}h2{font-size:14pt;margin-top:25px;border-bottom:1px solid #999}li{margin:9px 0;break-inside:avoid;overflow-wrap:anywhere}section{margin-bottom:20px}@media print{@page{size:A4;margin:18mm}body{margin:0}h2{break-after:avoid}}</style></head><body><h1>${safe(profile.full_name || 'Akademik CV')}</h1><p>${safe(profile.specialty)}<br>${safe(profile.institution)}<br>${safe(profile.contact_email)}<br>${safe(profile.orcid)}</p><p>${safe(profile.bio)}</p><h2>Bilimsel Yayınlar - Toplam ${rows.length}</h2>${sections || '<p>Seçili yayın bulunmuyor.</p>'}${certSection}</body></html>`;
 
   w.document.write(html);
   w.document.close();
@@ -636,7 +833,7 @@ emailBtn.style.marginLeft = '8px';
 document.querySelector('#cv .actions').appendChild(emailBtn);
 
 emailBtn.onclick = () => {
-  const ids = new Set([...document.querySelectorAll('.cvcheck:checked')].map(x => x.value));
+  const ids = new Set([...document.querySelectorAll('.cvcheck.pubcheck:checked')].map(x => x.value));
   const rows = publications.filter(p => ids.has(String(p.id)));
 
   if (!rows.length) {
