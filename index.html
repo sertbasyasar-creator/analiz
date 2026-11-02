@@ -75,14 +75,26 @@
 </nav>
 
 <!-- ============ YAYINLARIM ============ -->
-<section id="publications" class="panel tab">
+<section id="publications" class="panel tab hidden">
   <h1>Bilimsel yayınlarım</h1>
   <div class="stats">
     <div><small>Yayın</small><strong id="count">0</strong></div>
     <div><small>Kaydedilmiş atıf</small><strong id="citations">0</strong></div>
   </div>
-  <label>Yayın ara<input id="search" type="search" placeholder="Başlık, yazar, dergi, yıl..."></label>
-  <div id="list"></div>
+  
+  <div class="columns" style="align-items: end; margin-bottom: 0;">
+    <label style="margin-top:0;">Yayın ara<input id="search" type="search" placeholder="Başlık, yazar, dergi, yıl..."></label>
+    <label style="margin-top:0;">Sıralama ölçütü
+      <select id="sortBy" style="cursor: pointer;">
+        <option value="yearDesc">En yeni yıl (Yerden eskiye)</option>
+        <option value="yearAsc">En eski yıl (Eskiden yeniye)</option>
+        <option value="titleAsc">Alfabetik (A-Z)</option>
+        <option value="addedDesc">En son yüklenen</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="list" style="margin-top: 20px;"></div>
 </section>
 
 <!-- ============ YAYIN EKLE / DÜZENLE ============ -->
